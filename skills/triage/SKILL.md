@@ -96,4 +96,4 @@ Ask each open question in chat, one line per question, after the write.
 ## 8. Report
 
 The final table: #, title, labels, outcome. Then the open questions, if any. When run on its own, end with the
-next command: `/gh-tasks:plan-version` with milestones on, otherwise `/gh-tasks:next-task`.
+next command: `/gh-tasks:plan-version` when milestones are on and none is open, otherwise `/gh-tasks:next-task`.
