@@ -68,6 +68,27 @@ export const findMilestone = (milestones, title) => milestones.find((milestone) 
 export const getOpenMilestones = (milestones) => milestones
     .filter((milestone) => milestone.state === "open" && isMilestoneTitle(milestone.title));
 
+const pad = (number) => String(number).padStart(2, "0");
+
+/**
+ * An ISO time in the local time zone with its offset, e.g. 2026-10-13T01:41:07+03:00: the user's own date, and
+ * still exact as a GitHub search qualifier (`closed:>=…`)
+ */
+export const formatLocalTime = (iso) => {
+    const date = new Date(iso);
+    const offset = -date.getTimezoneOffset();
+    const sign = offset < 0 ? "-" : "+";
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+        + `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+        + `${sign}${pad(Math.floor(Math.abs(offset) / 60))}:${pad(Math.abs(offset) % 60)}`;
+};
+
+export const getMilestoneStatus = (milestone) => {
+    if (milestone.state !== "open") return `closed — released ${formatLocalTime(milestone.closed_at)}`;
+    if (milestone.open_issues > 0) return "open — in progress";
+    return milestone.closed_issues > 0 ? "open — waiting for a release" : "open — empty";
+};
+
 /** "2026-09-25" → the end of that day in UTC: GitHub shows a milestone overdue from the next day */
 export const getDueOn = (date) => {
     if (date === undefined) return undefined;

@@ -25,8 +25,8 @@ import { parseArgs } from "node:util";
 import { runIfMain } from "./cli.mjs";
 import { loadConfig } from "./config.mjs";
 import {
-    buildApiArgs, findMilestone, getDueOn, getLatestVersion, getNextPatch, getOpenMilestones, isMilestoneTitle,
-    PAGE_SIZE, parseVersionOutput, splitCommand,
+    buildApiArgs, findMilestone, getDueOn, getLatestVersion, getMilestoneStatus, getNextPatch, getOpenMilestones,
+    isMilestoneTitle, PAGE_SIZE, parseVersionOutput, splitCommand,
 } from "./milestoneCore.mjs";
 
 const EXIT_NO_VERSION = 2;
@@ -46,9 +46,7 @@ const run = (file, args, { input, cwd } = {}) => {
 const gh = (args, input) => run("gh", args, { input });
 
 const formatHeader = (milestone) => [
-    `${milestone.title} (${milestone.state === "open"
-        ? "open — waiting for a release"
-        : `closed — released ${milestone.closed_at.slice(0, 10)}`})`,
+    `${milestone.title} (${getMilestoneStatus(milestone)})`,
     `done ${milestone.closed_issues} of ${milestone.closed_issues + milestone.open_issues}`,
     ...(milestone.due_on ? [`due ${milestone.due_on.slice(0, 10)}`] : []),
 ].join(" — ");

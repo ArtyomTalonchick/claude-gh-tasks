@@ -7,6 +7,8 @@
 - `next-task` skill: takes the next issue in the milestone order or by priority, type and age, through plan, code,
   checks, commit and close. By default only the final diff waits for «ok»; `plan` also waits for the plan; `auto`
   runs without gates once checks are configured and skips `type:ops`; `loop` goes on to the next task.
+- `milestone.mjs list` and `show`: an open milestone says «in progress», «waiting for a release» or «empty»; a
+  closed one shows its release time in the local time zone, and `plan-version` searches from that exact time.
 
 ## 0.1.1 — 2026-10-13
 

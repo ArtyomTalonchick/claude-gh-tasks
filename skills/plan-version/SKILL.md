@@ -47,8 +47,8 @@ milestone, plus the issues of the open milestone.
   `${CLAUDE_PLUGIN_ROOT}/skills/triage/SKILL.md` first. Without `auto` nothing is written yet: their triage table is
   part of the gate in step 6. With `auto` they are triaged as `triage auto` does.
 - Issues closed as completed with no milestone since the previous milestone was closed
-  (`gh issue list --state closed --search "no:milestone reason:completed closed:>=<its release date>"`, the date from `milestone.mjs list`) ship in this
-  release: assign them too and list them in the gate under «Already done».
+  (`gh issue list --state closed --search "no:milestone reason:completed closed:>=<its release time>"`, the time as
+  `milestone.mjs list` prints it) ship in this release: assign them too and list them in the gate under «Already done».
 - Always in: `status:in-progress`, `prio:critical`. Always out: `prio:backlog`, issues whose triage outcome is
   «duplicate» or «not doing».
 

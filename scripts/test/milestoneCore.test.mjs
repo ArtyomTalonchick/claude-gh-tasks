@@ -1,8 +1,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-    buildApiArgs, compareVersions, findMilestone, getDueOn, getLatestVersion, getMilestonePath, getNextPatch,
-    getOpenMilestones, isMilestoneTitle, parseVersion, parseVersionOutput, splitCommand,
+    buildApiArgs, compareVersions, findMilestone, formatLocalTime, getDueOn, getLatestVersion, getMilestonePath,
+    getMilestoneStatus, getNextPatch, getOpenMilestones, isMilestoneTitle, parseVersion, parseVersionOutput,
+    splitCommand,
 } from "../milestoneCore.mjs";
 
 const REPO = "owner/name";
@@ -178,5 +179,39 @@ describe("parseVersionOutput", () => {
         test(`${i + 2}. refused: ${JSON.stringify(stdout)}`, () => {
             assert.throws(() => parseVersionOutput(stdout), /vX\.Y\.Z/);
         });
+    });
+});
+
+describe("formatLocalTime", () => {
+    const LOCAL_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
+    ["2026-10-12T22:41:07Z", "2026-01-01T00:00:00Z", "2026-06-30T23:59:59Z"].forEach((iso, i) => {
+        test(`${i + 1}. ${iso} keeps the instant`, () => {
+            const local = formatLocalTime(iso);
+            assert.match(local, LOCAL_TIME);
+            assert.equal(new Date(local).getTime(), new Date(iso).getTime());
+        });
+    });
+
+    test("4. the date is the local one", () => {
+        const date = new Date(2026, 9, 13, 0, 30, 5);
+        assert.equal(formatLocalTime(date.toISOString()).slice(0, 19), "2026-10-13T00:30:05");
+    });
+});
+
+describe("getMilestoneStatus", () => {
+    [
+        [{ state: "open", open_issues: 1, closed_issues: 1 }, "open — in progress"],
+        [{ state: "open", open_issues: 0, closed_issues: 2 }, "open — waiting for a release"],
+        [{ state: "open", open_issues: 0, closed_issues: 0 }, "open — empty"],
+    ].forEach(([milestone, expected], i) => {
+        test(`${i + 1}. ${expected}`, () => assert.equal(getMilestoneStatus(milestone), expected));
+    });
+
+    test("4. closed → released at the local time", () => {
+        const closedAt = "2026-10-12T22:41:07Z";
+        assert.equal(
+            getMilestoneStatus({ state: "closed", closed_at: closedAt, open_issues: 0, closed_issues: 5 }),
+            `closed — released ${formatLocalTime(closedAt)}`,
+        );
     });
 });
