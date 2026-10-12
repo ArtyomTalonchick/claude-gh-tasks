@@ -1,0 +1,37 @@
+{
+  "enabledPlugins": {
+    "gh-tasks@gh-tasks": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(gh issue *)",
+      "Bash(gh label *)",
+      "Bash(gh search issues *)",
+      "Bash(node *gh-tasks*/scripts/config.mjs*)",
+      "Bash(node *gh-tasks*/scripts/labels.mjs*)",
+      "Bash(node *gh-tasks*/scripts/milestone.mjs*)",
+      "PowerShell(gh issue *)",
+      "PowerShell(gh label *)",
+      "PowerShell(gh search issues *)",
+      "PowerShell(node *gh-tasks*/scripts/config.mjs*)",
+      "PowerShell(node *gh-tasks*/scripts/labels.mjs*)",
+      "PowerShell(node *gh-tasks*/scripts/milestone.mjs*)"
+    ],
+    "deny": [
+      "Bash(gh api *)",
+      "Bash(gh repo *)",
+      "Bash(gh pr *)",
+      "Bash(gh workflow *)",
+      "Bash(gh secret *)",
+      "Bash(gh variable *)",
+      "Bash(gh auth *)",
+      "PowerShell(gh api *)",
+      "PowerShell(gh repo *)",
+      "PowerShell(gh pr *)",
+      "PowerShell(gh workflow *)",
+      "PowerShell(gh secret *)",
+      "PowerShell(gh variable *)",
+      "PowerShell(gh auth *)"
+    ]
+  }
+}

@@ -37,3 +37,9 @@ claude plugin validate .
 - Code: Node 20+, ESM `.mjs`, `node:util parseArgs`, `execFileSync` with an argument array (never a shell
   string), `node --test`, ESLint clean. Pure functions are exported and tested; the CLI runs only when the file
   is executed directly.
+
+## Tasks
+
+Tasks live in GitHub Issues; the workflow is run by the gh-tasks plugin (`/gh-tasks:triage`,
+`/gh-tasks:plan-version`, `/gh-tasks:next-task`) — this repository dogfoods itself. Config and project rules:
+`.claude/gh-tasks/`. A task created from chat gets the `status:inbox` label.

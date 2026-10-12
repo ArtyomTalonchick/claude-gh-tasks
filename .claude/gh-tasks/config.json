@@ -1,0 +1,12 @@
+{
+  "language": "en",
+  "milestones": true,
+  "version": { "scheme": "patch" },
+  "checks": ["npm test", "npm run lint", "claude plugin validate ."],
+  "commit": {
+    "format": "type: subject",
+    "example": "feat: labels script with dry run, renames and explicit deletion",
+    "types": ["feat", "fix", "docs", "test", "chore"],
+    "trailers": false
+  }
+}
