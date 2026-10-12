@@ -1,0 +1,162 @@
+---
+name: setup
+description: Initialise or update a project for the gh-tasks workflow — config, labels, rules skeleton, CLAUDE.md note and permissions. Run by the user as /gh-tasks:setup; other gh-tasks skills point here when the config is missing or invalid.
+disable-model-invocation: true
+allowed-tools: >-
+  Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" *)
+  Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" *)
+  Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" *)
+  PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" *)
+  PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" *)
+  PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" *)
+  Bash(gh label list *) PowerShell(gh label list *)
+  Bash(git log *) PowerShell(git log *)
+  Bash(git remote get-url *) PowerShell(git remote get-url *)
+---
+
+# gh-tasks setup
+
+Prepares the project at `${CLAUDE_PROJECT_DIR}` for the gh-tasks workflow. Re-runnable: it only adds or updates,
+and never removes anything without the user's explicit word.
+
+Run the plugin scripts exactly as written below, quotes included —
+`node "${CLAUDE_PLUGIN_ROOT}/scripts/<name>.mjs" … --project "${CLAUDE_PROJECT_DIR}"` — so they match the allowed
+tools and survive paths with spaces. Talk to the user in their language; files in GitHub use the project language
+chosen in step 2.
+
+## 1. Preconditions
+
+1. `gh label list --limit 1` (not `gh auth status`: the permissions of step 5 deny `gh auth *`). No `gh` →
+   «GitHub CLI is not installed: https://cli.github.com», stop. Not logged in → «Run `gh auth login` first», stop.
+2. `git remote get-url origin` must point to GitHub. No remote → «Add a GitHub remote (`origin`) or set `repo` in
+   `.claude/gh-tasks/config.json`», stop.
+3. `.claude/gh-tasks/config.json` exists → **update mode**: run
+   `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"` and use its output as the
+   current values. An invalid config is not a stop here: show the errors and fix them through the questions,
+   and write the fixed `config.json` (step 4.1) before step 3 — `labels.mjs` refuses an invalid config.
+
+## 2. Questions — one message
+
+Collect the facts first, then ask everything in one block, each question with a proposed answer (in update mode
+the current value), so the user can reply «ok» or change single items:
+
+- **Milestones** — plan releases as GitHub milestones? Default: yes.
+- **Version scheme** (only with milestones) — `patch` (next version = highest `vX.Y.Z` milestone + 1 on patch) or
+  a project command that prints the next version on its first stdout line. The command runs without a shell from
+  the project root; on Windows it must start with an executable such as `node`, not `npm run`.
+  Milestone titles are always `vX.Y.Z`.
+- **Language** of issues, milestones and comments — propose the language of recent issues and commits.
+- **Checks** — commands run before showing a change; propose them from `package.json` scripts (lint, type check,
+  test). None found → propose an empty list; never invent commands.
+- **Commit format** — read the last ~30 subjects (`git log -30 --format=%s`). A visible convention → propose it
+  with a real example from the log and the types it uses; none → conventional commits `type(scope): subject`.
+  Suggest improvements only if they are small and clear. Trailers stay off unless the user asks.
+- **Project commit skill** — only if `.claude/skills/commit/` exists: absorb its format rules into
+  `config.commit` and delete it, or keep it (gh-tasks still commits only through `gh-tasks:commit`).
+- **Issue template extra lines** — only if the project obviously needs one (e.g. «who is affected»); else skip.
+
+## 3. Labels
+
+1. `node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" apply --project "${CLAUDE_PROJECT_DIR}" --dry-run`
+2. Show the plan: renames, creates, updates, conflicts, foreign labels. Ask which foreign labels to delete —
+   all, some or none — and warn that deleting a label removes it from every issue that has it. A conflict
+   (old and new name both exist) is resolved by the user: move the issues, then the old label may be deleted.
+3. After «yes»: `node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" apply --project "${CLAUDE_PROJECT_DIR}"` with one
+   `--delete <name>` per label the user named (quote names with spaces). Never pass a name the user did not give.
+
+## 4. Project files
+
+1. **`.claude/gh-tasks/config.json`** — write every field the user answered in step 2 explicitly (`language`,
+   `milestones`, `version`, `checks`, `commit`), so the file documents the project's choices; add `repo` only if
+   it differs from `origin` and `issueTemplate` only with extra lines. Plain JSON, two-space indent. In update
+   mode keep fields the questions did not touch.
+2. **`.claude/gh-tasks/rules.md`** — create only if missing; never overwrite. Skeleton:
+
+   ```markdown
+   # gh-tasks rules
+
+   Project additions to the gh-tasks skills. Each heading is read at a fixed moment; an empty or missing
+   heading is skipped. Content may be in any language.
+
+   ## Pick
+   <!-- next-task, before taking a task: what to skip, locks, size limits -->
+
+   ## Plan
+   <!-- next-task, after reading the issue: where to look, notes to read -->
+
+   ## Implement
+   <!-- next-task, before coding: project rules, schema or migration conventions -->
+
+   ## Verify
+   <!-- next-task, after checks and before showing: manual checks, reviewers, local URLs -->
+
+   ## Commit
+   <!-- commit, before committing: anything beyond config.commit -->
+
+   ## After commit
+   <!-- next-task, after each commit: syncs, merges -->
+
+   ## Close
+   <!-- next-task, after closing: notes to update, knowledge to capture -->
+
+   ## Triage
+   <!-- triage, while rewriting a body: markers to keep, comment conventions, extra line semantics -->
+
+   ## Plan version
+   <!-- plan-version, while choosing scope: release size, themes, groups -->
+   ```
+
+   In update mode with an existing file: add any missing headings at the end, leave the rest untouched.
+3. **Project `CLAUDE.md`** — append once (skip if a paragraph mentioning `gh-tasks` is already there):
+   «Tasks live in GitHub Issues; the workflow is run by the gh-tasks plugin (`/gh-tasks:triage`,
+   `/gh-tasks:plan-version`, `/gh-tasks:next-task`). Config and project rules: `.claude/gh-tasks/`. A task
+   created from chat gets the `status:inbox` label.» Write it in the language the file already uses.
+4. Validate: `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"`. An error is
+   fixed now, not reported as done.
+
+## 5. Permissions
+
+Show this block, and after the user confirms merge it into the project `.claude/settings.json`: add missing
+entries, never remove or reorder existing ones, keep the rest of the file as is.
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue *)", "Bash(gh label *)", "Bash(gh search issues *)",
+      "Bash(node *gh-tasks*/scripts/config.mjs*)", "Bash(node *gh-tasks*/scripts/labels.mjs*)",
+      "Bash(node *gh-tasks*/scripts/milestone.mjs*)",
+      "PowerShell(gh issue *)", "PowerShell(gh label *)", "PowerShell(gh search issues *)",
+      "PowerShell(node *gh-tasks*/scripts/config.mjs*)", "PowerShell(node *gh-tasks*/scripts/labels.mjs*)",
+      "PowerShell(node *gh-tasks*/scripts/milestone.mjs*)"
+    ],
+    "deny": [
+      "Bash(gh api *)", "Bash(gh repo *)", "Bash(gh pr *)", "Bash(gh workflow *)",
+      "Bash(gh secret *)", "Bash(gh variable *)", "Bash(gh auth *)",
+      "PowerShell(gh api *)", "PowerShell(gh repo *)", "PowerShell(gh pr *)", "PowerShell(gh workflow *)",
+      "PowerShell(gh secret *)", "PowerShell(gh variable *)", "PowerShell(gh auth *)"
+    ]
+  }
+}
+```
+
+The `PowerShell(...)` entries are for Windows; on other systems offer only the `Bash(...)` ones. Explain the deny
+of `gh api` in one line: its token can do anything and a rule cannot narrow it; milestones go through
+`milestone.mjs`, which only reaches `repos/<repo>/milestones`.
+
+Also check that `enabledPlugins` in the same file contains `"gh-tasks@gh-tasks": true`; if the plugin was installed
+in another scope, offer to add it so the project carries the plugin for everyone who clones it.
+
+## 6. Report
+
+Short list: what was created or changed (labels, files, settings), what the user should review (`config.json`,
+`rules.md`), what was left as is.
+
+With milestones on and no open milestone, offer to create the first one: run
+`node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" next-version --project "${CLAUDE_PROJECT_DIR}"`; exit code 2 means
+no `vX.Y.Z` milestone exists yet — ask the user for the first version. After the user confirms the title, run
+`node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" create --project "${CLAUDE_PROJECT_DIR}" --title <vX.Y.Z>`.
+This step is optional; skip it on «no».
+
+End with the next command: `/gh-tasks:triage` when there are untriaged issues, otherwise `/gh-tasks:plan-version`
+(milestones on) or `/gh-tasks:next-task`.
