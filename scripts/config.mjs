@@ -167,17 +167,36 @@ export const loadConfig = (projectDir, { getRemoteUrl = getOriginUrl } = {}) => 
 
     const { config, errors, warnings } = validateConfig(raw);
     if (!config.repo && !errors.length) {
-        let url = "";
-        try {
-            url = getRemoteUrl(projectDir);
-        } catch {
-            // no git, no repository or no origin: reported below
-        }
-        const repo = parseRepoFromRemote(url);
+        const repo = readOriginRepo(projectDir, getRemoteUrl);
         if (repo) config.repo = repo;
         else errors.push("\"repo\" is not set and cannot be read from `git remote get-url origin`");
     }
     return { config: errors.length ? null : config, errors, warnings };
+};
+
+const readOriginRepo = (projectDir, getRemoteUrl) => {
+    try {
+        return parseRepoFromRemote(getRemoteUrl(projectDir));
+    } catch {
+        // no git, no repository or no origin
+        return null;
+    }
+};
+
+/**
+ * The repository of a project: from its config when there is one, else from the `origin` remote — `setup` creates
+ * labels before it writes the config.
+ * @throws when the config is invalid or no repository can be found
+ */
+export const resolveRepo = (projectDir, { getRemoteUrl = getOriginUrl } = {}) => {
+    if (fs.existsSync(getConfigPath(projectDir))) {
+        const { config, errors } = loadConfig(projectDir, { getRemoteUrl });
+        if (errors.length) throw new Error(`${errors.join("; ")}. Run /gh-tasks:setup to fix the config.`);
+        return config.repo;
+    }
+    const repo = readOriginRepo(projectDir, getRemoteUrl);
+    if (!repo) throw new Error("no config and no GitHub repository in `git remote get-url origin`");
+    return repo;
 };
 
 const USAGE = "Usage: node config.mjs check --project <dir>";

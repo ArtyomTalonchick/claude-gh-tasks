@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DEFAULTS, getConfigPath, loadConfig, parseRepoFromRemote, validateConfig } from "../config.mjs";
+import { DEFAULTS, getConfigPath, loadConfig, parseRepoFromRemote, resolveRepo, validateConfig } from "../config.mjs";
 
 describe("validateConfig", () => {
     test("1. empty object → defaults, no errors or warnings", () => {
@@ -166,5 +166,23 @@ describe("loadConfig", () => {
         assert.equal(config, null);
         assert.equal(errors.length, 1);
         assert.equal(warnings.length, 1);
+    });
+
+    test("8. resolveRepo: config repo wins over the remote", () => {
+        const dir = makeProject("{ \"repo\": \"owner/name\" }");
+        assert.equal(resolveRepo(dir, remote("git@github.com:other/repo.git")), "owner/name");
+    });
+
+    test("9. resolveRepo: no config → the remote", () => {
+        assert.equal(resolveRepo(makeProject(), remote("https://github.com/owner/name.git")), "owner/name");
+    });
+
+    test("10. resolveRepo: invalid config → throws, the remote is not a fallback", () => {
+        const dir = makeProject("{ \"milestones\": 1 }");
+        assert.throws(() => resolveRepo(dir, remote("git@github.com:owner/name.git")), /"milestones" must be/);
+    });
+
+    test("11. resolveRepo: no config and no remote → throws", () => {
+        assert.throws(() => resolveRepo(makeProject(), noRemote), /no config/);
     });
 });
