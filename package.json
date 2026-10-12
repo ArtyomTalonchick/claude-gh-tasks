@@ -5,9 +5,17 @@
   "type": "module",
   "description": "Claude Code plugin: a task tracker workflow on GitHub Issues",
   "license": "MIT",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "test": "node --test scripts/test",
-    "lint": "eslint --ext .mjs scripts"
+    "test": "node --test",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0"
   }
 }
