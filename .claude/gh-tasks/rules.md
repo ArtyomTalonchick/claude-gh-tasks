@@ -8,6 +8,7 @@ heading is skipped. Content may be in any language.
 
 ## Plan
 <!-- next-task, after reading the issue: where to look, notes to read -->
+Without `auto`, always show the plan and wait for «ok», as with the `plan` flag.
 
 ## Implement
 <!-- next-task, before coding: project rules, schema or migration conventions -->

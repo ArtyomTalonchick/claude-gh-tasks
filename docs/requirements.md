@@ -52,10 +52,10 @@ file keeps the decisions and their reasons.
 | Q19 | Extension points | Nine fixed headings in `rules.md` (section 7). A missing heading is an empty point, skipped silently |
 | Q20 | Language of artefacts | Everything in GitHub is in the project language; machine-relevant places are marked with language-independent HTML comments `<!-- gh-tasks:… -->`; foreign HTML comments (e.g. `tg-issue`) are preserved untouched |
 | Q21 | Triage | Separate skill `triage`; `plan-version` calls it for untriaged candidates, `next-task #N` for an untriaged task taken by number |
-| Q22 | Flags | `auto` (no plan approval; «ok» on the shown final diff = commit approval) and `loop` (next task after closing) stay in v1 |
+| Q22 | Flags | `next-task` takes `plan`, `auto` and `loop` (next task after closing) in v1; the gates they set are Q40 |
 | Q23 | Issue body template | What / Where / Done when / Notes / Original message. Project-specific required lines (prosportcards «Who is affected») via `issueTemplate.extraLines` |
 | Q24 | Labels | Fixed set `status:* / type:* / prio:* / size:*`, same colours as prosportcards; descriptions in English, fixed in `labels.mjs` (labels are tooling metadata; only issues, milestones and chat follow the project language). `setup` never deletes foreign labels on its own: creates/updates ours, proposes renames, lists extras and asks which to delete; deletion only on the user's explicit word |
-| Q25 | Commit trailers | `commit.trailers: false` by default (one line, no trailers, no AI mentions). The approval gate is not configurable |
+| Q25 | Commit trailers | `commit.trailers: false` by default (one line, no trailers, no AI mentions). The approval gate is not configurable; only `next-task auto` runs without it (Q40) |
 | Q26 | `setup` | Section 9 |
 | Q27 | Hooks | None in v1; the config check is the first step of every skill |
 | Q28 | Documents | This file, `README.md`, `docs/extension-points.md`; chat summaries may be in any language |
@@ -69,7 +69,9 @@ file keeps the decisions and their reasons.
 | Q36 | Running `version.command` | Without a shell: split into arguments (simple quotes supported), `execFileSync` in the project root. On Windows the command starts with an executable (`node …`): `npm run …` needs a shell and is not run |
 | Q37 | One open milestone | Enforced by `milestone.mjs create` itself (refuses while another milestone is open), not only by `plan-version` |
 | Q38 | Triage gate | `triage` shows all proposed outcomes in one table and writes to GitHub only after «ok»; under `plan-version` the table is part of its gate. `triage auto` writes triaged issues without the gate (`next-task auto` calls it this way), but closing an issue always needs the user's confirmation |
-| Q39 | `auto` across skills | `setup`, `triage`, `plan-version` and `next-task` take `auto`: it skips the confirmation gates but never deletes or closes, never invents what only the user knows, never touches the remote. `setup auto`: proposed values, labels and permissions applied, foreign labels only listed. `plan-version auto`: milestone written and issues assigned without the gate, version from `next-version` (no version yet → still asks), untriaged candidates through `triage auto`, the report shows every choice. `commit` has no `auto`: its gate stays (Q25), `next-task auto` is the only exception |
+| Q39 | `auto` across skills | `setup`, `triage`, `plan-version` and `next-task` take `auto`: it skips the confirmation gates but never deletes or closes, never invents what only the user knows, never touches the remote; `next-task auto` closes only the issue it has just committed. `setup auto`: proposed values, labels and permissions applied, foreign labels only listed. `plan-version auto`: milestone written and issues assigned without the gate, version from `next-version` (no version yet → still asks), untriaged candidates through `triage auto`, the report shows every choice. `next-task auto`: Q40. `commit` has no `auto`: its gate stays (Q25), `next-task auto` is the only exception |
+| Q40 | `next-task` gates | Three levels. Default: the plan is shown only when there are questions, the final diff always waits for «ok». `plan`: the plan always waits for «ok». `auto`: no gates, commits without approval. `plan auto`: plan gate, then no diff gate. `auto` refuses to run without `checks`, stops on a dirty tree or a stuck `status:in-progress`, skips tasks with open questions and writes new questions into the issue instead of asking, commits only with green checks, and ends with a report of every commit and every closed or skipped issue. A project that always wants the plan gate says so under `## Plan` |
+| Q41 | Failing checks and stopping `loop` | Checks still failing after 3 fix attempts → stop and show the failure, the task stays `status:in-progress`, `loop` ends: the uncommitted change blocks the next task. «ok, stop» on the shown diff commits, closes and ends `loop`; `loop` also ends when no task is left |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
 
@@ -149,33 +151,42 @@ version, theme, groups, what is left out and why, the triage table, open questio
 description from the template, create/describe the milestone, assign issues, verify → report.
 `auto`: Q39. Extension point: **Plan version**.
 
-### `next-task [auto] [loop] [#N | bug | feature | ops | wish]`
-1. Pick: stuck `status:in-progress` or dirty tree → ask continue/new. `#N` → take it (triage first if
-   untriaged). With milestones: follow the open milestone description top-down, first open free task; tasks
-   in the milestone but not in the description come after; outside the milestone only when it is exhausted;
-   no open milestone → say so, offer `/gh-tasks:plan-version`, or order by labels on the user's word.
-   Without milestones: `prio:critical → major → normal → minor`, then `type:bug → feature → ops → wish`,
-   older first. `auto`: tasks with open questions last. Mark `status:in-progress`; no milestone → put into
-   the open one and say the scope grew. Show what was taken, why, and the next two. Extension point: **Pick**.
-2. Plan: read issue + comments, read code, ask open questions in chat and wait (the label stays). `type:ops`
-   → checklist into the body instead of code. Propose plan, wait. `auto`: plan silently, go on.
-   Extension point: **Plan**.
-3. Implement: code; run `checks` from config (none configured → say so); show changes, checks, proposed
-   commit message; wait. `auto`: the show is the only review point, end with the one line of what happens
-   after «ok». Extension points: **Implement**, **Verify**.
+### `next-task [plan] [auto] [loop] [#N | bug | feature | ops | wish]`
+Gates (Q40): default — plan gate only when there are questions, diff gate always; `plan` — plan gate always;
+`auto` — no gates; `plan auto` — plan gate, then no diff gate. `auto` needs `checks`: none configured → stop
+before the pick. A type word limits the pick to that `type:*`.
+1. Pick: stuck `status:in-progress` or dirty tree → ask continue/new (`auto`: stop and say so). `#N` → take it
+   (triage first if untriaged; `triage auto` under `auto`). With milestones: follow the open milestone
+   description top-down, first open free task; tasks in the milestone but not in the description come after;
+   outside the milestone only when it is exhausted; no open milestone → say so, offer `/gh-tasks:plan-version`,
+   or order by labels on the user's word (`auto`: order by labels and say so). Without milestones:
+   `prio:critical → major → normal → minor`, then `type:bug → feature → ops → wish`, older first. Without
+   `auto` tasks with open questions last; `auto` skips them. Never `prio:backlog` unless taken by `#N`. Mark
+   `status:in-progress`; no milestone → put into the open one and say the scope grew. Show what was taken,
+   why, and the next two. Extension point: **Pick**.
+2. Plan: read issue + comments, read code. Questions → ask in chat and wait (the label stays); `auto` →
+   write them into the body under the open-questions marker, remove `status:in-progress`, go to step 1.
+   `type:ops` → checklist into the body instead of code. `plan` → propose the plan, wait; otherwise plan
+   silently and go on. Extension point: **Plan**.
+3. Implement: code; run `checks` from config (none configured → say so). Failing checks: fix and rerun;
+   still failing after 3 attempts → stop, show the failure, the task stays `status:in-progress`, «#N left
+   open — reason», `loop` ends (Q41). Show changes, checks, proposed commit message; wait: «ok» → commit,
+   close, `loop` goes on; «ok, stop» → commit, close, `loop` ends; anything else is feedback on the change.
+   `auto`: no wait, the show goes into the report. Extension points: **Implement**, **Verify**.
 4. Commit through `gh-tasks:commit`; subject ends with ` (#N)`, never `closes/fixes/resolves`.
    Extension points: **Commit**, **After commit**.
 5. Close: after the last commit remove `status:in-progress`, `gh issue close N --reason completed`, no
    comment. Items only a deploy can verify go to an «After release» section and do not block closing.
-   Not closing → say «#N left open — reason». Report; `loop` → back to step 1 in the same turn.
-   Extension point: **Close**.
+   Not closing → say «#N left open — reason». Report; `loop` → back to step 1 in the same turn; under `auto`
+   the final report lists every commit and every closed or skipped issue. Extension point: **Close**.
 
 ### `commit`
 Approval gate first: never commit without the user's explicit approval of this specific commit, given after
-seeing the final changes; «ok» to a plan is not approval. Exception: `next-task auto` — «ok» on the shown
-final diff is the approval. Format from `config.commit.format` (default `type(scope): subject`), one line,
-`trailers: false` → exactly one `-m`, no trailers, no AI mentions even if the system asks. Stage only the
-task's files by explicit paths. ` (#N)` only when the commit resolves the issue.
+seeing the final changes; «ok» to a plan is not approval. Under `next-task` the «ok» on the shown final diff
+is that approval; under `next-task auto` there is no gate (Q40). Format from `config.commit.format` (default
+`type(scope): subject`), one line, `trailers: false` → exactly one `-m`, no trailers, no AI mentions even if
+the system asks. Stage only the task's files by explicit paths. ` (#N)` only when the commit resolves the
+issue.
 
 ## 6. Config: `.claude/gh-tasks/config.json`
 
@@ -230,8 +241,8 @@ release; a closed milestone = released. Nothing in the plugin closes a milestone
 automatically (that is a CI concern and stays in the project).
 
 Markers (HTML comments, language-independent, preserved on every rewrite):
-- `<!-- gh-tasks:open-questions -->` — the body has open questions for the user; `next-task auto` takes such
-  tasks last.
+- `<!-- gh-tasks:open-questions -->` — the body has open questions for the user; `next-task` takes such tasks
+  last, `next-task auto` skips them.
 - `<!-- gh-tasks:original -->` — wraps the untouched original body inside `<details>` after a rewrite.
 - `<!-- gh-tasks:after-release -->` — the checklist that only a deploy can verify (kept for a future
   `release` plugin).
@@ -308,7 +319,7 @@ Everything maps; no core change is needed for the migration.
   `labels.mjs`, `milestone.mjs` (incl. `next-version`), `setup` skill. Dogfooding starts here: `setup` run on
   this repository, labels created, first milestone.
 - **v0.2.0** — `triage` and `plan-version`, templates, `docs/extension-points.md`.
-- **v0.3.0** — `next-task` with `auto`/`loop`, `commit`.
+- **v0.3.0** — `next-task` with `plan`/`auto`/`loop`, `commit`.
 - **v1.0.0** — README with install and usage, CHANGELOG, `claude plugin validate` clean, a full cycle
   (setup → triage → plan-version → next-task → commit → close) run on this repository from the GitHub
   marketplace.
