@@ -1,0 +1,13 @@
+{
+  "name": "gh-tasks",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Claude Code plugin: a task tracker workflow on GitHub Issues",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test scripts/test",
+    "lint": "eslint --ext .mjs scripts"
+  }
+}

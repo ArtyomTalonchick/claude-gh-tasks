@@ -1,0 +1,8 @@
+{
+  "name": "gh-tasks",
+  "description": "The gh-tasks plugin: a task tracker workflow on GitHub Issues.",
+  "owner": { "name": "Artyom Talonchick" },
+  "plugins": [
+    { "name": "gh-tasks", "source": ".", "description": "Task tracker workflow on GitHub Issues" }
+  ]
+}
