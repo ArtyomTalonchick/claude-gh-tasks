@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.1 — 2026-10-13
+
 - `triage` skill: rewrites untriaged issues by the body template, sets type, priority and size, closes duplicates
   and pointless issues after confirmation; `auto` writes without the gate.
 - `plan-version` skill: picks and orders the open issues into one milestone by the description template, triaging
