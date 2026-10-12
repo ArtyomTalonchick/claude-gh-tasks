@@ -76,7 +76,9 @@ file keeps the decisions and their reasons.
 - A marketplace entry `"source": "."` means the marketplace root itself → a single-plugin repository is its
   own marketplace. Entry `name` must equal the manifest `name`.
 - `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_PROJECT_DIR}` are substituted in the SKILL.md body and in
-  `allowed-tools` rules, but are **not** in the environment of Bash commands: scripts get paths as arguments.
+  `allowed-tools` Bash rules (PowerShell rules are not documented; the skills list both forms), with forward
+  slashes on Windows, but are **not** in the environment of Bash commands: scripts get paths as arguments.
+  `allowed-tools` applies only to the turn the skill runs in; deny rules still win over it.
 - A plugin cannot ship permissions or `.claude/rules`. Options: `allowed-tools` in a skill's frontmatter for
   bundled scripts; `permissions` in the user or project `settings.json`.
 - Local-path marketplace loads the plugin in place (`/reload-plugins`, no version bump). A git marketplace
@@ -111,8 +113,9 @@ claude-gh-tasks/                    repository and folder; the plugin and the ma
   .claude/gh-tasks/config.json + rules.md   the plugin's own tracker (dogfooding)
 ```
 
-Scripts are invoked from skills as `node ${CLAUDE_PLUGIN_ROOT}/scripts/<name>.mjs … --project ${CLAUDE_PROJECT_DIR}`
-and listed in the skill's `allowed-tools` so they run without prompts. The repository is read from the
+Scripts are invoked from skills as `node "${CLAUDE_PLUGIN_ROOT}/scripts/<name>.mjs" … --project "${CLAUDE_PROJECT_DIR}"`
+(quoted, for paths with spaces) and listed in the skill's `allowed-tools` with the same quoting so they run
+without prompts. The repository is read from the
 config or from `git remote` of the project; nothing is hard-coded.
 
 ## 5. Skills
@@ -257,7 +260,10 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
    `Bash(gh api *)`, `gh repo *`, `gh pr *`, `gh workflow *`, `gh secret *`, `gh variable *`, `gh auth *`.
    Both `Bash(...)` and `PowerShell(...)` forms on Windows. Why deny `gh api`: the `gh auth` token can do
    anything through it, and a permission rule cannot narrow it; `milestone.mjs` is the only door, with the
-   path built as `repos/<repo>/milestones[/<n>]` and the method from `GET/POST/PATCH`.
+   path built as `repos/<repo>/milestones[/<n>]` and the method from `GET/POST/PATCH`. `${CLAUDE_PLUGIN_ROOT}` is
+   not substituted in `settings.json` and the cache path changes with every version, so the script rules are
+   patterns: `Bash(node *gh-tasks*/scripts/<name>.mjs*)`. Because `gh auth *` is denied, skills check `gh` with
+   `gh label list --limit 1`, not `gh auth status`.
 6. Report: what was created, what to review, and the next command (`/gh-tasks:triage` or `/gh-tasks:plan-version`).
 
 ## 10. Non-functional requirements
