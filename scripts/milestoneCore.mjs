@@ -1,0 +1,112 @@
+/*
+ * Pure milestone mechanics for `milestone.mjs`. This is the only place that builds a `gh api` call: the path is
+ * always `repos/<repo>/milestones[/<number>]` and the method one of GET / POST / PATCH, so the script can be
+ * allowed while `gh api` itself stays denied.
+ */
+import { isRepo } from "./config.mjs";
+
+// A milestone is named as the version it releases
+export const MILESTONE_TITLE_PATTERN = /^v(\d+)\.(\d+)\.(\d+)$/;
+
+export const isMilestoneTitle = (title) => typeof title === "string" && MILESTONE_TITLE_PATTERN.test(title);
+
+/** "v1.2.3" → [1, 2, 3]; anything else → null */
+export const parseVersion = (title) => {
+    const match = typeof title === "string" ? title.match(MILESTONE_TITLE_PATTERN) : null;
+    return match ? match.slice(1).map(Number) : null;
+};
+
+export const compareVersions = (a, b) => {
+    const [left, right] = [parseVersion(a), parseVersion(b)];
+    return left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
+};
+
+/** The highest vX.Y.Z among the titles (other titles are ignored); none → null */
+export const getLatestVersion = (titles) => (titles ?? [])
+    .filter(isMilestoneTitle)
+    .sort(compareVersions)
+    .at(-1) ?? null;
+
+export const getNextPatch = (version) => {
+    const [major, minor, patch] = parseVersion(version);
+    return `v${major}.${minor}.${patch + 1}`;
+};
+
+export const getMilestonePath = (repo, number) => {
+    if (!isRepo(repo)) throw new Error(`the repository must be "owner/name", got ${JSON.stringify(repo)}`);
+    if (number !== undefined && !(Number.isInteger(number) && number > 0)) {
+        throw new Error(`a milestone number must be a positive integer, got ${JSON.stringify(number)}`);
+    }
+    return `repos/${repo}/milestones${number === undefined ? "" : `/${number}`}`;
+};
+
+export const API_METHODS = ["GET", "POST", "PATCH"];
+export const PAGE_SIZE = 100;
+
+/**
+ * Arguments for `gh api`. A list (GET without a number) asks for one page of milestones in every state.
+ * @param {"GET" | "POST" | "PATCH"} method
+ * @param {string} repo
+ * @param {{ number?: number, page?: number, hasPayload?: boolean }} [options] the payload goes to stdin
+ */
+export const buildApiArgs = (method, repo, { number, page = 1, hasPayload = false } = {}) => {
+    if (!API_METHODS.includes(method)) throw new Error(`method ${method} is not allowed`);
+    if (!(Number.isInteger(page) && page > 0)) throw new Error(`a page must be a positive integer, got ${page}`);
+    const isList = method === "GET" && number === undefined;
+    const query = isList ? `?state=all&per_page=${PAGE_SIZE}&page=${page}` : "";
+    return [
+        "api", `${getMilestonePath(repo, number)}${query}`,
+        "--method", method,
+        "-H", "Accept: application/vnd.github+json",
+        ...(hasPayload ? ["--input", "-"] : []),
+    ];
+};
+
+export const findMilestone = (milestones, title) => milestones.find((milestone) => milestone.title === title);
+
+export const getOpenMilestones = (milestones) => milestones.filter((milestone) => milestone.state === "open");
+
+/** "2026-09-25" → the end of that day in UTC: GitHub shows a milestone overdue from the next day */
+export const getDueOn = (date) => {
+    if (date === undefined) return undefined;
+    const valid = /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`));
+    if (!valid) throw new Error(`--due must be a date YYYY-MM-DD, got ${date}`);
+    return `${date}T23:59:59Z`;
+};
+
+/**
+ * Splits `version.command` into a program and its arguments without a shell. Double and single quotes group
+ * words; there are no escapes, variables or operators.
+ */
+export const splitCommand = (command) => {
+    const tokens = [];
+    let current = null;
+    let quote = null;
+    for (const char of command ?? "") {
+        if (quote) {
+            if (char === quote) quote = null;
+            else current += char;
+        } else if (char === "\"" || char === "'") {
+            quote = char;
+            current ??= "";
+        } else if (/\s/.test(char)) {
+            if (current !== null) tokens.push(current);
+            current = null;
+        } else {
+            current = (current ?? "") + char;
+        }
+    }
+    if (quote) throw new Error(`unterminated ${quote} in version.command: ${command}`);
+    if (current !== null) tokens.push(current);
+    if (!tokens.length) throw new Error("version.command is empty");
+    return tokens;
+};
+
+/** The first stdout line of `version.command` must be the version */
+export const parseVersionOutput = (stdout) => {
+    const line = (stdout ?? "").split(/\r?\n/)[0].trim();
+    if (!isMilestoneTitle(line)) {
+        throw new Error(`version.command must print vX.Y.Z on its first line, got ${JSON.stringify(line)}`);
+    }
+    return line;
+};
