@@ -5,7 +5,8 @@ triage incoming issues → plan a release as a milestone → take the next task 
 
 Skills: `/gh-tasks:setup`, `/gh-tasks:triage`, `/gh-tasks:plan-version`, `/gh-tasks:next-task`, `/gh-tasks:commit`.
 
-Status: requirements settled, implementation not started — see `docs/requirements.md`.
+Status: v0.1.0 — `setup` and the scripts behind it (`config`, `labels`, `milestone`); the other skills follow in
+v0.2.0–v0.3.0, see `docs/requirements.md` section 12.
 
 ## Install (planned)
 

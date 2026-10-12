@@ -1,6 +1,6 @@
 {
   "name": "gh-tasks",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Task tracker workflow on GitHub Issues: triage, milestone plan, next task to commit, close.",
   "author": { "name": "Artyom Talonchick" },
   "license": "MIT",
