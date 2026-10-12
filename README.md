@@ -5,10 +5,16 @@ triage incoming issues → plan a release as a milestone → take the next task 
 
 Skills: `/gh-tasks:setup`, `/gh-tasks:triage`, `/gh-tasks:plan-version`, `/gh-tasks:next-task`, `/gh-tasks:commit`.
 
-Status: v0.1.2 — all five skills and the scripts behind them (`config`, `labels`, `milestone`); the README with
-install and usage follows in v1.0.0, see `CHANGELOG.md`.
+Status: v0.1.2 — all five skills and the scripts behind them (`config`, `labels`, `milestone`); see
+`CHANGELOG.md`.
 
-## Install (planned)
+## Requirements
+
+- [GitHub CLI](https://cli.github.com), logged in (`gh auth login`).
+- Node.js 20 or newer.
+- A git repository whose `origin` points to GitHub (or `repo` set in the config).
+
+## Install
 
 ```
 /plugin marketplace add ArtyomTalonchick/claude-gh-tasks
@@ -16,8 +22,78 @@ install and usage follows in v1.0.0, see `CHANGELOG.md`.
 /gh-tasks:setup
 ```
 
-Project rules for the skills go to `.claude/gh-tasks/rules.md`; the headings and when each is read:
-[`docs/extension-points.md`](docs/extension-points.md).
+The project scope writes the plugin into the project `.claude/settings.json`, so everyone who clones the
+repository gets it. `/gh-tasks:setup` asks its questions in one message, each with a proposed answer — reply «ok»
+or change single items. It then:
 
-Development: `claude plugin marketplace add ./claude-gh-tasks` from the parent folder loads the plugin in place;
-`/reload-plugins` picks up edits. `claude plugin validate .` checks the manifest.
+- writes `.claude/gh-tasks/config.json` and creates `.claude/gh-tasks/rules.md` with empty headings;
+- creates the labels `status:*`, `type:*`, `prio:*`, `size:*` and lists the labels it does not own; it deletes
+  only the ones you name;
+- adds a short gh-tasks note to the project `CLAUDE.md`;
+- merges the permissions below into `.claude/settings.json`;
+- with milestones on, offers to create the first milestone.
+
+`/gh-tasks:setup auto` takes every proposed value without questions and deletes nothing. Run `setup` again at any
+time: it only adds or updates.
+
+## The cycle
+
+1. **Create issues** — on GitHub by hand, or ask Claude in chat; an issue created from chat gets `status:inbox`.
+   An open issue with `status:inbox`, or without a type, priority or size label, is untriaged.
+2. **`/gh-tasks:triage [auto] [#N]`** — rewrites each untriaged issue by the body template (What, Where, Done
+   when, Notes; the original text is kept in a collapsed block), sets type, priority and size, and proposes to
+   close duplicates and pointless issues. It shows a table and waits for «ok»; `auto` writes the triaged issues
+   without waiting. Closing always waits for your word. `prio:backlog` is set only by you.
+3. **`/gh-tasks:plan-version [auto]`** — milestones only. Picks the open issues for the next release, orders them,
+   writes the milestone description and assigns the issues after your «ok»; `auto` writes without waiting.
+   Untriaged candidates are triaged first.
+4. **`/gh-tasks:next-task [plan] [auto] [loop] [#N | bug | feature | ops | wish]`** — takes the next issue: the
+   first open one in the milestone description, otherwise by priority, type and age. It marks the issue
+   `status:in-progress`, plans, writes the change, runs the `checks`, shows the diff and the commit message and
+   waits for «ok», then commits through `gh-tasks:commit` and closes the issue.
+   - `plan` — also waits for «ok» on the plan (by default the plan is shown only when there are questions).
+   - `auto` — no gates: commits once the checks pass. It needs `checks` in the config, stops on a dirty tree or a
+     task left `status:in-progress`, skips `type:ops` tasks and tasks with open questions, and writes new
+     questions into the issue instead of asking. `plan auto` keeps the plan gate only.
+   - `loop` — goes on to the next task after each commit, until no task is left or you answer «ok, stop».
+   - Checks still failing after 3 fix attempts → it stops and leaves the change uncommitted.
+5. **`/gh-tasks:commit [#N]`** — commits the current change in the project's format, staging the task's files by
+   explicit paths, only after you approve this exact commit. `next-task` commits only through it.
+
+No skill pushes, pulls or fetches: the remote is yours. No skill closes a milestone either — close it when you
+release.
+
+## Configuration
+
+`.claude/gh-tasks/config.json` holds what a field can express:
+
+| Field | Meaning | Default |
+|---|---|---|
+| `repo` | `owner/name` of the GitHub repository | parsed from `git remote get-url origin` |
+| `language` | language of issues, milestones and comments; chat follows you | `en` |
+| `milestones` | plan releases as milestones; `false` turns off `plan-version` and `next-task` orders by labels | `true` |
+| `version` | `{ "scheme": "patch" }` (highest `vX.Y.Z` milestone + 1 on patch) or `{ "scheme": "command", "command": "…" }` that prints the next version on its first stdout line | `patch` |
+| `checks` | commands run before a change is shown, e.g. `["npm run lint", "npm test"]` | `[]` |
+| `commit` | `format`, `example`, `types` and `trailers` of commit messages | `type(scope): subject`, no trailers |
+| `issueTemplate.extraLines` | extra lines of the issue body template, e.g. «Who is affected» | `[]` |
+
+`.claude/gh-tasks/rules.md` holds what a field cannot express: prose rules under fixed headings (`## Pick`,
+`## Plan`, `## Implement`, `## Verify`, `## Commit`, `## After commit`, `## Close`, `## Triage`,
+`## Plan version`), each read by a skill at a fixed moment, in any language. An empty heading is skipped. The
+contract and an example for each heading: [`docs/extension-points.md`](docs/extension-points.md).
+
+## Permissions
+
+`setup` adds to the project `.claude/settings.json` (the `PowerShell(...)` twins only on Windows):
+
+- **allow** — `gh issue *`, `gh label *`, `gh search issues *` and the plugin scripts `config.mjs`, `labels.mjs`,
+  `milestone.mjs`, so the cycle runs without a prompt on every call;
+- **deny** — `gh api *`, `gh repo *`, `gh pr *`, `gh workflow *`, `gh secret *`, `gh variable *`, `gh auth *`.
+
+`gh api` is denied because its token can do anything and a permission rule cannot narrow it to one endpoint.
+Milestones go through `scripts/milestone.mjs` instead, which only reaches `repos/<repo>/milestones`.
+
+## Development
+
+`claude plugin marketplace add ./claude-gh-tasks` from the parent folder loads the plugin in place;
+`/reload-plugins` picks up edits. Run `npm test`, `npm run lint` and `claude plugin validate .` after a change.

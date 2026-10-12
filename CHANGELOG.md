@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- README: requirements, install, the cycle of skills with their flags, the config fields, `rules.md` and the
+  permissions `setup` adds.
+
 ## 0.1.2 — 2026-10-13
 
 - `commit` skill: commits only after the user approved this exact commit, in the `config.commit` format, staging
