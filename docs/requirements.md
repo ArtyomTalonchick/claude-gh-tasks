@@ -70,7 +70,7 @@ file keeps the decisions and their reasons.
 | Q37 | One open milestone | Enforced by `milestone.mjs create` itself (refuses while another milestone is open), not only by `plan-version` |
 | Q38 | Triage gate | `triage` shows all proposed outcomes in one table and writes to GitHub only after «ok»; under `plan-version` the table is part of its gate. `triage auto` writes triaged issues without the gate (`next-task auto` calls it this way), but closing an issue always needs the user's confirmation |
 | Q39 | `auto` across skills | `setup`, `triage`, `plan-version` and `next-task` take `auto`: it skips the confirmation gates but never deletes or closes, never invents what only the user knows, never touches the remote; `next-task auto` closes only the issue it has just committed. `setup auto`: proposed values, labels and permissions applied, foreign labels only listed. `plan-version auto`: milestone written and issues assigned without the gate, version from `next-version` (no version yet → still asks), untriaged candidates through `triage auto`, the report shows every choice. `next-task auto`: Q40. `commit` has no `auto`: its gate stays (Q25), `next-task auto` is the only exception |
-| Q40 | `next-task` gates | Three levels. Default: the plan is shown only when there are questions, the final diff always waits for «ok». `plan`: the plan always waits for «ok». `auto`: no gates, commits without approval. `plan auto`: plan gate, then no diff gate. `auto` refuses to run without `checks`, stops on a dirty tree or a stuck `status:in-progress`, skips tasks with open questions and writes new questions into the issue instead of asking, commits only with green checks, and ends with a report of every commit and every closed or skipped issue. A project that always wants the plan gate says so under `## Plan` |
+| Q40 | `next-task` gates | Three levels. Default: the plan is shown only when there are questions, the final diff always waits for «ok». `plan`: the plan always waits for «ok». `auto`: no gates, commits without approval. `plan auto`: plan gate, then no diff gate. `auto` refuses to run without `checks`, stops on a dirty tree or a stuck `status:in-progress`, skips tasks with open questions and `type:ops` tasks, writes new questions into the issue instead of asking, commits only with green checks, and ends with a report of every commit and every closed or skipped issue. A project that always wants the plan gate says so under `## Plan` |
 | Q41 | Failing checks and stopping `loop` | Checks still failing after 3 fix attempts → stop and show the failure, the task stays `status:in-progress`, `loop` ends: the uncommitted change blocks the next task. «ok, stop» on the shown diff commits, closes and ends `loop`; `loop` also ends when no task is left |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
@@ -161,9 +161,9 @@ before the pick. A type word limits the pick to that `type:*`.
    outside the milestone only when it is exhausted; no open milestone → say so, offer `/gh-tasks:plan-version`,
    or order by labels on the user's word (`auto`: order by labels and say so). Without milestones:
    `prio:critical → major → normal → minor`, then `type:bug → feature → ops → wish`, older first. Without
-   `auto` tasks with open questions last; `auto` skips them. Never `prio:backlog` unless taken by `#N`. Mark
-   `status:in-progress`; no milestone → put into the open one and say the scope grew. Show what was taken,
-   why, and the next two. Extension point: **Pick**.
+   `auto` tasks with open questions last; `auto` skips them and `type:ops`. Never `prio:backlog` unless taken
+   by `#N`. Mark `status:in-progress`; no milestone → put into the open one and say the scope grew. Show what
+   was taken, why, and the next two. Extension point: **Pick**.
 2. Plan: read issue + comments, read code. Questions → ask in chat and wait (the label stays); `auto` →
    write them into the body under the open-questions marker, remove `status:in-progress`, go to step 1.
    `type:ops` → checklist into the body instead of code. `plan` → propose the plan, wait; otherwise plan

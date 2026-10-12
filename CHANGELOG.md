@@ -6,7 +6,7 @@
   the task's files by explicit paths; no trailers unless the config allows them.
 - `next-task` skill: takes the next issue in the milestone order or by priority, type and age, through plan, code,
   checks, commit and close. By default only the final diff waits for «ok»; `plan` also waits for the plan; `auto`
-  runs without gates once checks are configured; `loop` goes on to the next task.
+  runs without gates once checks are configured and skips `type:ops`; `loop` goes on to the next task.
 
 ## 0.1.1 — 2026-10-13
 

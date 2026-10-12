@@ -66,6 +66,7 @@ Follow `## Pick`.
    - `milestones: false`, or the rest: `prio:critical → major → normal → minor`, then
      `type:bug → feature → ops → wish`, then older first.
    - A body with `<!-- gh-tasks:open-questions -->` goes last; `auto` skips it.
+   - `auto` skips `type:ops`: its work is done by the user (step 3).
 
    Nothing left → «No tasks left», stop.
 4. **Claim.** `gh issue edit N --add-label status:in-progress`. Milestones on, an open milestone exists and the
