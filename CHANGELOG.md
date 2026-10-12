@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `commit` skill: commits only after the user approved this exact commit, in the `config.commit` format, staging
+  the task's files by explicit paths; no trailers unless the config allows them.
+
 ## 0.1.1 — 2026-10-13
 
 - `triage` skill: rewrites untriaged issues by the body template, sets type, priority and size, closes duplicates
