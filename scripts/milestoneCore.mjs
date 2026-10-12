@@ -6,7 +6,7 @@
 import { isRepo } from "./config.mjs";
 
 // A milestone is named as the version it releases
-export const MILESTONE_TITLE_PATTERN = /^v(\d+)\.(\d+)\.(\d+)$/;
+export const MILESTONE_TITLE_PATTERN = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 export const isMilestoneTitle = (title) => typeof title === "string" && MILESTONE_TITLE_PATTERN.test(title);
 
@@ -64,12 +64,16 @@ export const buildApiArgs = (method, repo, { number, page = 1, hasPayload = fals
 
 export const findMilestone = (milestones, title) => milestones.find((milestone) => milestone.title === title);
 
-export const getOpenMilestones = (milestones) => milestones.filter((milestone) => milestone.state === "open");
+// Open release milestones; a milestone not named vX.Y.Z belongs to someone else and is ignored
+export const getOpenMilestones = (milestones) => milestones
+    .filter((milestone) => milestone.state === "open" && isMilestoneTitle(milestone.title));
 
 /** "2026-09-25" → the end of that day in UTC: GitHub shows a milestone overdue from the next day */
 export const getDueOn = (date) => {
     if (date === undefined) return undefined;
-    const valid = /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`));
+    // Date.parse rolls 2026-02-30 over to March: compare the round trip instead
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00Z`) : null;
+    const valid = parsed !== null && !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
     if (!valid) throw new Error(`--due must be a date YYYY-MM-DD, got ${date}`);
     return `${date}T23:59:59Z`;
 };

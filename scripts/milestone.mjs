@@ -21,8 +21,8 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { runIfMain } from "./cli.mjs";
 import { loadConfig } from "./config.mjs";
 import {
     buildApiArgs, findMilestone, getDueOn, getLatestVersion, getNextPatch, getOpenMilestones, isMilestoneTitle,
@@ -192,11 +192,4 @@ const main = () => {
     commands[command](createContext(args), args);
 };
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    try {
-        main();
-    } catch (error) {
-        console.error(error.message);
-        process.exit(1);
-    }
-}
+runIfMain(import.meta.url, main);

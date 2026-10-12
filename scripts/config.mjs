@@ -10,8 +10,8 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { runIfMain } from "./cli.mjs";
 
 export const getConfigPath = (projectDir) => path.join(projectDir, ".claude", "gh-tasks", "config.json");
 
@@ -118,14 +118,15 @@ export const validateConfig = (raw) => {
     return { config, errors, warnings };
 };
 
+// github.com only: gh would send another host's owner/name to github.com
 const REMOTE_PATTERNS = [
     // scp-like: git@github.com:owner/name.git
-    /^[^@/\s]+@[^:/\s]+:([^/]+)\/([^/]+?)(?:\.git)?\/?$/,
+    /^[^@/\s]+@github\.com:([^/]+)\/([^/]+?)(?:\.git)?\/?$/i,
     // URL: https://github.com/owner/name.git, ssh://git@github.com/owner/name.git
-    /^(?:https?|ssh|git):\/\/(?:[^@/]+@)?[^/]+\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/,
+    /^(?:https?|ssh|git):\/\/(?:[^@/]+@)?github\.com(?::\d+)?\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/i,
 ];
 
-/** `git remote get-url origin` output → "owner/name", or null when it is not a recognisable repository URL. */
+/** `git remote get-url origin` output → "owner/name", or null when it is not a github.com repository URL. */
 export const parseRepoFromRemote = (url) => {
     if (typeof url !== "string") return null;
     for (const pattern of REMOTE_PATTERNS) {
@@ -218,11 +219,4 @@ const main = () => {
     console.log(JSON.stringify(config, null, 2));
 };
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    try {
-        main();
-    } catch (error) {
-        console.error(error.message);
-        process.exit(1);
-    }
-}
+runIfMain(import.meta.url, main);

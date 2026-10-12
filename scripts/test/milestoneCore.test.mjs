@@ -16,6 +16,8 @@ describe("isMilestoneTitle / parseVersion", () => {
         ["v1.3", null],
         ["v1.3.9-rc", null],
         [" v1.3.9", null],
+        ["v01.2.3", null],
+        ["v1.2.03", null],
         ["release", null],
         [undefined, null],
     ].forEach(([title, expected], i) => {
@@ -112,6 +114,7 @@ describe("findMilestone / getOpenMilestones", () => {
     const milestones = [
         { title: "v0.1.0", number: 1, state: "closed" },
         { title: "v0.1.1", number: 2, state: "open" },
+        { title: "Backlog", number: 3, state: "open" },
     ];
 
     test("1. by title", () => {
@@ -119,7 +122,7 @@ describe("findMilestone / getOpenMilestones", () => {
         assert.equal(findMilestone(milestones, "v9.9.9"), undefined);
     });
 
-    test("2. open only", () => {
+    test("2. open release milestones only, foreign titles ignored", () => {
         assert.deepEqual(getOpenMilestones(milestones).map((m) => m.title), ["v0.1.1"]);
     });
 });
@@ -133,7 +136,7 @@ describe("getDueOn", () => {
         assert.equal(getDueOn(undefined), undefined);
     });
 
-    ["25.09.2026", "2026-9-25", "2026-13-01", "tomorrow"].forEach((date, i) => {
+    ["25.09.2026", "2026-9-25", "2026-13-01", "2026-02-30", "tomorrow"].forEach((date, i) => {
         test(`${i + 3}. refused: ${date}`, () => {
             assert.throws(() => getDueOn(date), /YYYY-MM-DD/);
         });

@@ -9,8 +9,8 @@
  */
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { runIfMain } from "./cli.mjs";
 import { resolveRepo } from "./config.mjs";
 
 // A colour must read in both GitHub themes: it is the chip background in the light one and the text colour in the
@@ -52,58 +52,69 @@ export const RENAMES = [
 ];
 
 const changedFields = (current, wanted) => [
+    ...(current.name === wanted.name ? [] : ["name"]),
     ...(current.color?.toLowerCase() === wanted.color ? [] : ["color"]),
     ...((current.description ?? "") === wanted.description ? [] : ["description"]),
 ];
 
+// GitHub label names are case-insensitive: "Bug" and "bug" are one label
+const keyOf = (name) => name.toLowerCase();
+
 /**
- * What `apply` has to do with the labels a repository has now. Pure.
+ * What `apply` has to do with the labels a repository has now. Pure. Plan entries carry the current names as GitHub
+ * has them (`from`, `current`), so commands address existing labels exactly.
  * @param {{ name: string, color?: string, description?: string }[]} existing
  */
 export const planLabels = (existing) => {
-    const byName = new Map(existing.map((label) => [label.name, label]));
+    const byKey = new Map(existing.map((label) => [keyOf(label.name), label]));
     const renames = [];
     const conflicts = [];
-    RENAMES.forEach(([from, to]) => {
-        if (!byName.has(from)) return;
+    RENAMES.forEach(([oldName, to]) => {
+        const old = byKey.get(keyOf(oldName));
+        if (!old) return;
         // Both exist: an interrupted run or a manual rename. Deleting the old one would strip it from its issues,
         // so the user moves them
-        if (byName.has(to)) {
-            conflicts.push({ from, to });
+        if (byKey.has(keyOf(to))) {
+            conflicts.push({ from: old.name, to });
             return;
         }
-        renames.push({ from, to });
-        byName.set(to, { ...byName.get(from), name: to });
-        byName.delete(from);
+        renames.push({ from: old.name, to });
+        byKey.set(keyOf(to), { ...old, name: to });
+        byKey.delete(keyOf(oldName));
     });
 
     const create = [];
     const update = [];
     const unchanged = [];
     LABELS.forEach((label) => {
-        const current = byName.get(label.name);
+        const current = byKey.get(keyOf(label.name));
         if (!current) {
             create.push(label);
             return;
         }
         const fields = changedFields(current, label);
-        if (fields.length) update.push({ ...label, fields });
+        if (fields.length) update.push({ ...label, current: current.name, fields });
         else unchanged.push(label.name);
     });
 
-    const ours = new Set(LABELS.map((label) => label.name));
+    const ours = new Set(LABELS.map((label) => keyOf(label.name)));
     const conflicting = new Set(conflicts.map(({ from }) => from));
-    const foreign = [...byName.keys()].filter((name) => !ours.has(name) && !conflicting.has(name)).sort();
+    const foreign = [...byKey.values()].map((label) => label.name)
+        .filter((name) => !ours.has(keyOf(name)) && !conflicting.has(name))
+        .sort();
     return { renames, conflicts, create, update, unchanged, foreign };
 };
 
 /** Only foreign labels and the old side of a conflict may be deleted. @returns {string[]} errors */
 export const checkDeletion = (names, plan) => {
     const deletable = new Set([...plan.foreign, ...plan.conflicts.map(({ from }) => from)]);
-    const ours = new Set(LABELS.map((label) => label.name));
-    return names.filter((name) => !deletable.has(name)).map((name) => (ours.has(name)
-        ? `"${name}" is a gh-tasks label and is never deleted`
-        : `"${name}" is not a label of this repository`));
+    const ours = new Set(LABELS.map((label) => keyOf(label.name)));
+    const renamed = new Map(plan.renames.map(({ from, to }) => [from, to]));
+    return names.filter((name) => !deletable.has(name)).map((name) => {
+        if (ours.has(keyOf(name))) return `"${name}" is a gh-tasks label and is never deleted`;
+        if (renamed.has(name)) return `"${name}" is renamed to "${renamed.get(name)}" and keeps its issues`;
+        return `"${name}" is not a label of this repository`;
+    });
 };
 
 export const formatPlan = (plan, toDelete = []) => {
@@ -112,7 +123,8 @@ export const formatPlan = (plan, toDelete = []) => {
     return [
         ...plan.renames.map(({ from, to }) => `rename: ${from} → ${to}`),
         ...plan.create.map(({ name }) => `create: ${name}`),
-        ...plan.update.map(({ name, fields }) => `update: ${name} (${fields.join(", ")})`),
+        ...plan.update.map(({ name, current, fields }) =>
+            `update: ${current === name ? name : `${current} → ${name}`} (${fields.join(", ")})`),
         ...toDelete.map((name) => `delete: ${name}`),
         ...plan.conflicts.filter(({ from }) => !deleting.has(from)).map(({ from, to }) =>
             `conflict: both "${from}" and "${to}" exist — move the issues to "${to}", then --delete "${from}"`),
@@ -160,18 +172,11 @@ const main = () => {
     plan.renames.forEach(({ from, to }) => gh(["label", "edit", from, "--name", to, "--repo", repo]));
     plan.create.forEach(({ name, color, description }) => gh(["label", "create", name, "--repo", repo,
         "--color", color, "--description", description]));
-    plan.update.forEach(({ name, color, description }) => gh(["label", "edit", name, "--repo", repo,
-        "--color", color, "--description", description]));
+    plan.update.forEach(({ name, current, color, description }) => gh(["label", "edit", current, "--repo", repo,
+        ...(current === name ? [] : ["--name", name]), "--color", color, "--description", description]));
     toDelete.forEach((name) => gh(["label", "delete", name, "--repo", repo, "--yes"]));
     console.log(`${repo}: done`);
     lines.forEach((line) => console.log(line));
 };
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    try {
-        main();
-    } catch (error) {
-        console.error(error.message);
-        process.exit(1);
-    }
-}
+runIfMain(import.meta.url, main);

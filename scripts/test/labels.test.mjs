@@ -66,6 +66,24 @@ describe("planLabels", () => {
     });
 });
 
+describe("planLabels — case", () => {
+    test("1. names match case-insensitively; a case difference is an update of the name", () => {
+        const existing = ours.map((label) => (label.name === "status:inbox" ? { ...label, name: "Status:Inbox" } : label));
+        const plan = planLabels(existing);
+        assert.deepEqual(plan.create, []);
+        assert.equal(plan.update.length, 1);
+        assert.equal(plan.update[0].current, "Status:Inbox");
+        assert.deepEqual(plan.update[0].fields, ["name"]);
+        assert.deepEqual(plan.foreign, []);
+    });
+
+    test("2. an old name in another case is renamed under its real name", () => {
+        const plan = planLabels([{ name: "Bug" }]);
+        assert.deepEqual(plan.renames, [{ from: "Bug", to: "type:bug" }]);
+        assert.equal(plan.update.find((label) => label.name === "type:bug").current, "type:bug");
+    });
+});
+
 describe("checkDeletion", () => {
     const plan = planLabels([...ours, { name: "wontfix" }, { name: "p2" }]);
 
@@ -77,7 +95,12 @@ describe("checkDeletion", () => {
         assert.match(checkDeletion(["type:bug"], plan)[0], /never deleted/);
     });
 
-    test("3. unknown names are refused", () => {
+    test("3. a label being renamed is refused with the reason", () => {
+        const renaming = planLabels([{ name: "bug" }]);
+        assert.match(checkDeletion(["bug"], renaming)[0], /renamed to "type:bug"/);
+    });
+
+    test("4. unknown names are refused", () => {
         assert.match(checkDeletion(["nope"], plan)[0], /not a label/);
     });
 });
