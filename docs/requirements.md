@@ -67,6 +67,7 @@ file keeps the decisions and their reasons.
 | Q35 | Milestone title | Always `vX.Y.Z`, with either version scheme; the first stdout line of `version.command` is checked against the same pattern |
 | Q36 | Running `version.command` | Without a shell: split into arguments (simple quotes supported), `execFileSync` in the project root. On Windows the command starts with an executable (`node …`): `npm run …` needs a shell and is not run |
 | Q37 | One open milestone | Enforced by `milestone.mjs create` itself (refuses while another milestone is open), not only by `plan-version` |
+| Q38 | Triage gate | `triage` shows all proposed outcomes in one table and writes to GitHub only after «ok»; under `plan-version` the table is part of its gate. `triage auto` writes triaged issues without the gate (`next-task auto` calls it this way), but closing an issue always needs the user's confirmation |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
 
@@ -127,14 +128,14 @@ say so and point to `/gh-tasks:setup`, stop.
 Initialises or updates a project. Flow in section 9. Re-runnable: only adds or updates, never removes
 without asking.
 
-### `triage [#N]`
+### `triage [auto] [#N]`
 Turns raw issues into triaged ones. Untriaged = open, and has `status:inbox` **or** lacks any of type /
 priority / size. Skips `status:in-progress`.
 Per issue: read with comments → find the place in code (Explore agent for wide searches) → one outcome:
 triaged (body by template, labels, `status:inbox` removed) / duplicate of #M (comment in #M, close
 `not planned`) / not doing (close `not planned` with a reason, only if pointless or already done).
 Open questions go into the body under the `open-questions` marker and are asked in chat, one line each.
-Milestone is never assigned by triage. Extension point: **Triage**.
+Milestone is never assigned by triage. Gate and `auto`: Q38. Extension point: **Triage**.
 
 ### `plan-version`
 Requires `milestones: true`. One open milestone at a time. Flow: state (open milestone? else next version

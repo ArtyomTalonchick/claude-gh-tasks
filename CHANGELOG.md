@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `triage` skill: rewrites untriaged issues by the body template, sets type, priority and size, closes duplicates
+  and pointless issues after confirmation; `auto` writes without the gate.
+
 ## 0.1.0 — 2026-10-12
 
 - `setup` skill: config questions, labels, `rules.md` skeleton, `CLAUDE.md` note, permissions, first milestone.
