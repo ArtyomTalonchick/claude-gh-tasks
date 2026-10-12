@@ -8,6 +8,7 @@
   untriaged candidates first; `auto` writes without the gate.
 - `setup auto`: takes the proposed values without questions, applies labels and permissions, lists foreign labels
   instead of deleting them.
+- `docs/extension-points.md`: the contract of the `rules.md` headings, with an example for each.
 - `milestone.mjs list` and `show` print the release date of a closed milestone.
 
 ## 0.1.0 — 2026-10-12

@@ -16,5 +16,8 @@ v0.2.0–v0.3.0, see `docs/requirements.md` section 12.
 /gh-tasks:setup
 ```
 
+Project rules for the skills go to `.claude/gh-tasks/rules.md`; the headings and when each is read:
+[`docs/extension-points.md`](docs/extension-points.md).
+
 Development: `claude plugin marketplace add ./claude-gh-tasks` from the parent folder loads the plugin in place;
 `/reload-plugins` picks up edits. `claude plugin validate .` checks the manifest.
