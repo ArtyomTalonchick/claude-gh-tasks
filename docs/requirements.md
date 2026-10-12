@@ -244,7 +244,9 @@ Milestone description template: theme in one sentence + agreed date; progress no
 note; groups (Core → Quick → If time remains → Waits for the user) with one line per task saying what and
 why here; then «Deliberately not in this release», «Next, by themes», «Hard dependencies».
 
-## 9. `setup` flow
+## 9. `setup [auto]` flow
+
+`auto`: Q39.
 
 1. `gh auth status`; repo from `git remote`; existing `.claude/gh-tasks/config.json` → update mode.
 2. Questions, one block: milestones yes/no; version scheme (`patch` or a command); language; checks

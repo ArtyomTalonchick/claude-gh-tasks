@@ -2,6 +2,7 @@
 name: setup
 description: Initialise or update a project for the gh-tasks workflow — config, labels, rules skeleton, CLAUDE.md note and permissions. Run by the user as /gh-tasks:setup; other gh-tasks skills point here when the config is missing or invalid.
 disable-model-invocation: true
+argument-hint: "[auto]"
 allowed-tools: >-
   Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" *)
   Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" *)
@@ -19,6 +20,10 @@ allowed-tools: >-
 Prepares the project at `${CLAUDE_PROJECT_DIR}` for the gh-tasks workflow. Re-runnable: it only adds or updates,
 and never removes anything without the user's explicit word.
 
+Arguments: `$ARGUMENTS` — optional `auto`. With `auto` the skill asks nothing and takes every proposed value; it
+still never deletes, never invents what only the user knows, and never touches the remote. The steps below say
+what `auto` changes.
+
 Run the plugin scripts exactly as written below, quotes included —
 `node "${CLAUDE_PLUGIN_ROOT}/scripts/<name>.mjs" … --project "${CLAUDE_PROJECT_DIR}"` — so they match the allowed
 tools and survive paths with spaces. Talk to the user in their language; files in GitHub use the project language
@@ -34,6 +39,8 @@ chosen in step 2.
    `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"` and use its output as the
    current values. An invalid config is not a stop here: show the errors and fix them through the questions,
    and write the fixed `config.json` (step 4.1) before step 3 — `labels.mjs` refuses an invalid config.
+   `auto`: fix each error with the proposed value of step 2 when it is unambiguous; otherwise show the errors and
+   stop.
 
 ## 2. Questions — one message
 
@@ -55,6 +62,9 @@ the current value), so the user can reply «ok» or change single items:
   `config.commit` and delete it, or keep it (gh-tasks still commits only through `gh-tasks:commit`).
 - **Issue template extra lines** — only if the project obviously needs one (e.g. «who is affected»); else skip.
 
+`auto`: send no questions; take each proposed answer (in update mode the current value). A project commit skill
+is kept; issue template extra lines are skipped.
+
 ## 3. Labels
 
 1. `node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" apply --project "${CLAUDE_PROJECT_DIR}" --dry-run`
@@ -63,6 +73,9 @@ the current value), so the user can reply «ok» or change single items:
    (old and new name both exist) is resolved by the user: move the issues, then the old label may be deleted.
 3. After «yes»: `node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" apply --project "${CLAUDE_PROJECT_DIR}"` with one
    `--delete <name>` per label the user named (quote names with spaces). Never pass a name the user did not give.
+
+`auto`: skip the dry run and the question; run `apply` without `--delete`. Foreign labels and conflicts go to the
+report.
 
 ## 4. Project files
 
@@ -147,6 +160,8 @@ of `gh api` in one line: its token can do anything and a rule cannot narrow it; 
 Also check that `enabledPlugins` in the same file contains `"gh-tasks@gh-tasks": true`; if the plugin was installed
 in another scope, offer to add it so the project carries the plugin for everyone who clones it.
 
+`auto`: merge the block and add `enabledPlugins` without asking.
+
 ## 6. Report
 
 Short list: what was created or changed (labels, files, settings), what the user should review (`config.json`,
@@ -158,5 +173,9 @@ no `vX.Y.Z` milestone exists yet — ask the user for the first version. After t
 `node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" create --project "${CLAUDE_PROJECT_DIR}" --title <vX.Y.Z>`.
 This step is optional; skip it on «no».
 
+`auto`: the report also lists every value taken in step 2 and the foreign labels and conflicts left in place, so
+the user can correct them with another `/gh-tasks:setup`. The first milestone is created without asking, titled
+by `next-version`; exit code 2 still asks the user for the first version.
+
 End with the next command: `/gh-tasks:triage` when there are untriaged issues, otherwise `/gh-tasks:plan-version`
-(milestones on) or `/gh-tasks:next-task`.
+when milestones are on and none is open, otherwise `/gh-tasks:next-task`.
