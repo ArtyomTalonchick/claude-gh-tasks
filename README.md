@@ -5,8 +5,8 @@ triage incoming issues → plan a release as a milestone → take the next task 
 
 Skills: `/gh-tasks:setup`, `/gh-tasks:triage`, `/gh-tasks:plan-version`, `/gh-tasks:next-task`, `/gh-tasks:commit`.
 
-Status: v0.1.1 — `setup`, `triage`, `plan-version` and the scripts behind them (`config`, `labels`, `milestone`);
-`next-task` and `commit` follow, see `CHANGELOG.md`.
+Status: v0.1.2 — all five skills and the scripts behind them (`config`, `labels`, `milestone`); the README with
+install and usage follows in v1.0.0, see `CHANGELOG.md`.
 
 ## Install (planned)
 

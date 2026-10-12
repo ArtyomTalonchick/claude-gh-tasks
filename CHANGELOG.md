@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.2 — 2026-10-13
+
 - `commit` skill: commits only after the user approved this exact commit, in the `config.commit` format, staging
   the task's files by explicit paths; no trailers unless the config allows them.
 - `next-task` skill: takes the next issue in the milestone order or by priority, type and age, through plan, code,
