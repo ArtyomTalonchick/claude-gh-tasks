@@ -53,7 +53,7 @@ file keeps the decisions and their reasons.
 | Q21 | Triage | Separate skill `triage`; `plan-version` calls it for untriaged candidates, `next-task #N` for an untriaged task taken by number |
 | Q22 | Flags | `auto` (no plan approval; «ok» on the shown final diff = commit approval) and `loop` (next task after closing) stay in v1 |
 | Q23 | Issue body template | What / Where / Done when / Notes / Original message. Project-specific required lines (prosportcards «Who is affected») via `issueTemplate.extraLines` |
-| Q24 | Labels | Fixed set `status:* / type:* / prio:* / size:*`, same colours as prosportcards; descriptions in the project language. `setup` never deletes foreign labels: creates/updates ours, proposes renames, lists extras; deletion only on the user's explicit word |
+| Q24 | Labels | Fixed set `status:* / type:* / prio:* / size:*`, same colours as prosportcards; descriptions in English, fixed in `labels.mjs` (labels are tooling metadata; only issues, milestones and chat follow the project language). `setup` never deletes foreign labels on its own: creates/updates ours, proposes renames, lists extras and asks which to delete; deletion only on the user's explicit word |
 | Q25 | Commit trailers | `commit.trailers: false` by default (one line, no trailers, no AI mentions). The approval gate is not configurable |
 | Q26 | `setup` | Section 9 |
 | Q27 | Hooks | None in v1; the config check is the first step of every skill |
@@ -62,6 +62,8 @@ file keeps the decisions and their reasons.
 | Q30 | Issue creation skill | None. Issues are created on GitHub by hand or by asking in chat (`gh issue create --label status:inbox`); an open issue without type, priority and size is untriaged |
 | Q31 | Project `commit` skill | The plugin ships `commit`. `setup` detects a project `.claude/skills/commit` and asks: absorb its format rules into `config.commit` and delete it, or leave it (then `next-task` still commits only through `gh-tasks:commit`) |
 | Q32 | Install scope | Project scope (`enabledPlugins` in the project `.claude/settings.json`, committed). Not user scope: that would inject `/next-task` into projects with their own, e.g. prosportcards |
+| Q33 | Label renames: propose or apply | Both: `setup` runs `labels.mjs apply --dry-run`, shows the plan (renames, conflicts, creates, updates, foreign labels), and runs `apply` after the user's «yes» |
+| Q34 | Rename map and foreign labels | Map: `inbox`, `in-progress`, `bug`, `feature`, `wish`, `ops` → their prefixed names; `p1/p2/p3` → `prio:critical/normal/minor`; `size-s/m/l` → `size:s/m/l`. GitHub's `enhancement` is not renamed (broader meaning) and stays foreign. `setup` lists all foreign labels (GitHub defaults included) and asks: delete all, some or none — deleting a label removes it from its issues |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
 
@@ -207,11 +209,11 @@ language. A missing heading is an empty point. The full contract goes to `docs/e
 
 ## 8. Labels, markers, lifecycle
 
-Labels (names fixed, descriptions in the project language, colours as in prosportcards `labels.mjs`):
+Labels (names fixed, descriptions in English, colours as in prosportcards `labels.mjs`):
 `status:inbox`, `status:in-progress`; `type:bug|feature|wish|ops`; `prio:critical|major|normal|minor|backlog`;
 `size:s|m|l`. Exactly one status (or none for a triaged free task), one type, one priority, one size.
 `prio:backlog` is set only by the user. Rename map for projects coming from older schemes (`bug → type:bug`
-etc.) is applied only when the target does not exist yet.
+etc., Q34) is applied only when the target does not exist yet; both existing is a conflict for the user to resolve.
 
 Lifecycle: `status:inbox` or no labels → triage → free → `next-task` sets `status:in-progress` → commit(s)
 with `(#N)` → closed `completed` right after the last commit. Closed in an open milestone = waiting for a
@@ -241,8 +243,9 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
    (proposed from `package.json` scripts); commit format (proposed from the last ~30 `git log` subjects:
    detected convention, or conventional commits if none, with suggested improvements); existing project
    `commit` skill → absorb and delete, or keep (Q31).
-3. Labels: `labels.mjs apply` — create/update ours, apply renames where safe, print foreign labels; delete
-   only on the user's explicit word (`--delete <names>`).
+3. Labels: `labels.mjs apply --dry-run` → show the plan and ask which foreign labels to delete (all / some /
+   none) → `labels.mjs apply [--delete <names>]`: renames where safe, create/update ours, delete only the names
+   the user chose (Q33, Q34).
 4. Write `config.json`, a `rules.md` skeleton with the nine headings and one-line hints, and a short
    paragraph into the project `CLAUDE.md` («Tasks live in GitHub Issues, workflow by the gh-tasks plugin;
    config in `.claude/gh-tasks/`; a task created from chat gets `status:inbox`»).
