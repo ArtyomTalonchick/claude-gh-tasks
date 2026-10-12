@@ -4,7 +4,8 @@ A reusable Claude Code plugin that runs a project's task tracker in GitHub Issue
 plan a release as a milestone, take the next task through to a commit, close it. Extracted from the
 `prosportcards` project; the Telegram bot, the release CI and the worktree slots stay there.
 
-Status: requirements settled on 2026-10-12 (grilling interview, three rounds). Implementation has not started.
+Status: requirements settled on 2026-10-12 (grilling interview, three rounds); released versions and changes are
+in `CHANGELOG.md`.
 This file is the single source of truth until the plugin exists; later the skills carry the rules and this
 file keeps the decisions and their reasons.
 
