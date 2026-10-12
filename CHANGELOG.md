@@ -4,6 +4,9 @@
 
 - `triage` skill: rewrites untriaged issues by the body template, sets type, priority and size, closes duplicates
   and pointless issues after confirmation; `auto` writes without the gate.
+- `plan-version` skill: picks and orders the open issues into one milestone by the description template, triaging
+  untriaged candidates first; `auto` writes without the gate.
+- `milestone.mjs list` and `show` print the release date of a closed milestone.
 
 ## 0.1.0 — 2026-10-12
 

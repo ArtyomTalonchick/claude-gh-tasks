@@ -46,7 +46,9 @@ const run = (file, args, { input, cwd } = {}) => {
 const gh = (args, input) => run("gh", args, { input });
 
 const formatHeader = (milestone) => [
-    `${milestone.title} (${milestone.state === "open" ? "open — waiting for a release" : "closed — released"})`,
+    `${milestone.title} (${milestone.state === "open"
+        ? "open — waiting for a release"
+        : `closed — released ${milestone.closed_at.slice(0, 10)}`})`,
     `done ${milestone.closed_issues} of ${milestone.closed_issues + milestone.open_issues}`,
     ...(milestone.due_on ? [`due ${milestone.due_on.slice(0, 10)}`] : []),
 ].join(" — ");

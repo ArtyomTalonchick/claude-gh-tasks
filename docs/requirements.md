@@ -68,6 +68,7 @@ file keeps the decisions and their reasons.
 | Q36 | Running `version.command` | Without a shell: split into arguments (simple quotes supported), `execFileSync` in the project root. On Windows the command starts with an executable (`node …`): `npm run …` needs a shell and is not run |
 | Q37 | One open milestone | Enforced by `milestone.mjs create` itself (refuses while another milestone is open), not only by `plan-version` |
 | Q38 | Triage gate | `triage` shows all proposed outcomes in one table and writes to GitHub only after «ok»; under `plan-version` the table is part of its gate. `triage auto` writes triaged issues without the gate (`next-task auto` calls it this way), but closing an issue always needs the user's confirmation |
+| Q39 | `auto` across skills | `setup`, `triage`, `plan-version` and `next-task` take `auto`: it skips the confirmation gates but never deletes or closes, never invents what only the user knows, never touches the remote. `setup auto`: proposed values, labels and permissions applied, foreign labels only listed. `plan-version auto`: milestone written and issues assigned without the gate, version from `next-version` (no version yet → still asks), untriaged candidates through `triage auto`, the report shows every choice. `commit` has no `auto`: its gate stays (Q25), `next-task auto` is the only exception |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
 
@@ -137,7 +138,7 @@ triaged (body by template, labels, `status:inbox` removed) / duplicate of #M (co
 Open questions go into the body under the `open-questions` marker and are asked in chat, one line each.
 Milestone is never assigned by triage. Gate and `auto`: Q38. Extension point: **Triage**.
 
-### `plan-version`
+### `plan-version [auto]`
 Requires `milestones: true`. One open milestone at a time. Flow: state (open milestone? else next version
 via `milestone.mjs next-version`, which implements `patch` or runs the configured `command`) → candidates
 (triage all untriaged first; `status:in-progress` and `prio:critical` must be in; `prio:backlog` out) →
@@ -145,7 +146,7 @@ carry-over sections from the previous milestone → scope and order (one coheren
 it; batch by code; dependencies explicit; «Waits for the user» group last) → **gate**: one message with
 version, theme, groups, what is left out and why, the triage table, open questions → after «yes»: write the
 description from the template, create/describe the milestone, assign issues, verify → report.
-Extension point: **Plan version**.
+`auto`: Q39. Extension point: **Plan version**.
 
 ### `next-task [auto] [loop] [#N | bug | feature | ops | wish]`
 1. Pick: stuck `status:in-progress` or dirty tree → ask continue/new. `#N` → take it (triage first if
