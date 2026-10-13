@@ -14,6 +14,8 @@ describe("checkGhArgs", () => {
         ["issue", "close", "11", "--reason", "completed"],
         ["issue", "create", "--title", "x", "--label", "status:inbox"],
         ["label", "list", "--limit", "1"],
+        ["label", "create", "status:inbox", "--color", "ededed"],
+        ["label", "edit", "status:inbox", "--name", "status:new"],
         ["search", "issues", "--repo", "owner/name", "key words"],
     ].forEach((args, i) => {
         test(`${i + 1}. allowed: gh ${args.join(" ")}`, () => {
@@ -34,8 +36,9 @@ describe("checkGhArgs", () => {
         [["label"], /needs a subcommand/],
         [["issue", "delete", "11", "--yes"], /not run by gh-tasks/],
         [["issue", "transfer", "11", "owner/other"], /not run by gh-tasks/],
+        [["label", "delete", "bug", "--yes"], /labels\.mjs apply --delete/],
     ].forEach(([args, message], i) => {
-        test(`${i + 8}. refused: gh ${args.join(" ")}`, () => {
+        test(`${i + 10}. refused: gh ${args.join(" ")}`, () => {
             assert.match(checkGhArgs(args), message);
         });
     });

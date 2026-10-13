@@ -100,7 +100,8 @@ contract and an example for each heading: [`docs/extension-points.md`](docs/exte
 
 `gh api` is denied because its token can do anything and a permission rule cannot narrow it to one endpoint.
 Milestones go through `scripts/milestone.mjs` instead, which only reaches `repos/<repo>/milestones`. `gh.mjs` runs
-only `gh issue` (except `delete` and `transfer`), `gh label` and `gh search issues`.
+only `gh issue` (except `delete` and `transfer`), `gh label` (except `delete`: labels are deleted only by
+`labels.mjs apply --delete`) and `gh search issues`.
 
 ## Development
 

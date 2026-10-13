@@ -9,6 +9,7 @@
   acts as that account without switching the active one.
 - Every `gh.mjs` call runs against `config.repo`: a `repo` that differs from `origin` is honoured, and a project with
   two GitHub remotes no longer stops on «unable to determine base repository».
+- `gh.mjs` refuses `gh label delete`: labels are deleted only by `labels.mjs apply --delete`.
 
 ## 0.1.2 — 2026-10-13
 

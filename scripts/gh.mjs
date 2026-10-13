@@ -21,7 +21,8 @@ import { loadLocalConfig, resolveRepo } from "./config.mjs";
 
 const HOST = "github.com";
 
-// issue deletion and transfer move data out of reach: only the user does them
+// issue deletion and transfer move data out of reach: only the user does them; labels are deleted only by
+// labels.mjs, which never deletes a gh-tasks label
 const REFUSED_ISSUE_SUBCOMMANDS = new Set(["delete", "transfer"]);
 
 /** @returns {string | null} why the gh arguments are refused, or null when allowed */
@@ -31,6 +32,9 @@ export const checkGhArgs = (args) => {
         if (!subcommand || subcommand.startsWith("-")) return `gh ${command} needs a subcommand`;
         if (command === "issue" && REFUSED_ISSUE_SUBCOMMANDS.has(subcommand)) {
             return `gh issue ${subcommand} is not run by gh-tasks`;
+        }
+        if (command === "label" && subcommand === "delete") {
+            return "gh label delete is not run by gh-tasks: delete labels with labels.mjs apply --delete";
         }
         return null;
     }
