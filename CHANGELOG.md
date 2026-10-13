@@ -10,6 +10,7 @@
 - Every `gh.mjs` call runs against `config.repo`: a `repo` that differs from `origin` is honoured, and a project with
   two GitHub remotes no longer stops on «unable to determine base repository».
 - README states the minimum GitHub CLI version, 2.70.
+- CI runs the tests, lint and strict plugin validation on every push to `main` and pull request.
 - `gh.mjs` refuses `gh label delete`: labels are deleted only by `labels.mjs apply --delete`.
 
 ## 0.1.2 — 2026-10-13

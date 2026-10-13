@@ -106,3 +106,5 @@ only `gh issue` (except `delete` and `transfer`), `gh label` (except `delete`: l
 
 `claude plugin marketplace add ./claude-gh-tasks` from the parent folder loads the plugin in place;
 `/reload-plugins` picks up edits. Run `npm test`, `npm run lint` and `claude plugin validate .` after a change.
+CI (`.github/workflows/ci.yml`) runs the same checks, with `--strict` validation, on every push to `main` and pull
+request.
