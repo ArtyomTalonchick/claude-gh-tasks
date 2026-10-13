@@ -7,7 +7,8 @@ allowed-tools: >-
   Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" *)
-  Bash(gh issue *) PowerShell(gh issue *)
+  Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
+  PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
   Bash(git status *) PowerShell(git status *)
   Bash(git diff *) PowerShell(git diff *)
   Bash(git log *) PowerShell(git log *)
@@ -21,6 +22,9 @@ Arguments: `$ARGUMENTS` — any of `plan`, `auto`, `loop`, plus at most one of `
 Run the plugin scripts exactly as written, quotes included:
 `node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" <command> --project "${CLAUDE_PROJECT_DIR}" …`. Talk to the user in
 their language; everything written to GitHub is in `config.language`.
+
+Every other GitHub call goes through `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}"`,
+written exactly as below, never plain `gh`: the wrapper runs as the project's gh account.
 
 ## Gates
 
@@ -51,13 +55,15 @@ heading is skipped silently.
 
 Follow `## Pick`.
 
-1. **Unfinished work.** `gh issue list --state open --label status:in-progress --json number,title` and
-   `git status --short`. Either is non-empty → show it and ask: continue that task (go to step 3 with it) or start
-   a new one. `auto` → say what was found and stop.
+1. **Unfinished work.**
+   `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue list --state open --label status:in-progress --json number,title`
+   and `git status --short`. Either is non-empty → show it and ask: continue that task (go to step 3 with it) or
+   start a new one. `auto` → say what was found and stop.
 2. **`#N` given** → that issue. Closed → say so, stop. Untriaged (`status:inbox`, or missing a `type:*`, `prio:*`
    or `size:*` label) → run the `gh-tasks:triage` skill with `#N` (`auto #N` under `auto`) first; it was closed as a
    duplicate or «not doing» → stop.
-3. **Otherwise** `gh issue list --state open --limit 200 --json number,title,labels,milestone,body,createdAt`.
+3. **Otherwise**
+   `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue list --state open --limit 200 --json number,title,labels,milestone,body,createdAt`.
    Candidates: no `status:*` label, all of `type:*`, `prio:*`, `size:*`, not `prio:backlog`; a type word keeps only
    that `type:*`. Order:
    - `milestones: true`: `milestone.mjs list`. An open milestone → `milestone.mjs show --title <it>`: its
@@ -69,22 +75,27 @@ Follow `## Pick`.
    - `auto` skips `type:ops`: its work is done by the user (step 3).
 
    Nothing left → «No tasks left», stop.
-4. **Claim.** `gh issue edit N --add-label status:in-progress`. Milestones on, an open milestone exists and the
-   issue is not in it → `gh issue edit N --milestone <it>` and say the scope of the release grew.
+4. **Claim.**
+   `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --add-label status:in-progress`.
+   Milestones on, an open milestone exists and the issue is not in it →
+   `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --milestone <it>` and say
+   the scope of the release grew.
 5. **Show** what was taken and why, and the next two candidates.
 
 ## 3. Plan
 
 Follow `## Plan`.
 
-1. `gh issue view N --comments`; comments are part of the request. Read the code the issue points to; for a search
-   wider than a few files, use an Explore agent and keep only its conclusion.
+1. `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue view N --comments`;
+   comments are part of the request. Read the code the issue points to; for a search wider than a few files, use an
+   Explore agent and keep only its conclusion.
 2. **Questions** — open questions in the body, or anything only the user can decide:
    - without `auto` → ask them in chat, one line each, and wait; the label stays. Answers that change the scope go
      into the body (rewrite as in step 7 of `${CLAUDE_PLUGIN_ROOT}/skills/triage/SKILL.md`, the open-questions list
      shortened to what is still open);
    - `auto` → write them into the body under `<!-- gh-tasks:open-questions -->`, then
-     `gh issue edit N --remove-label status:in-progress`, note the issue as skipped and go back to step 2.
+     `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --remove-label status:in-progress`,
+     note the issue as skipped and go back to step 2.
 3. **`type:ops`** — the work is not code: write a checklist of the steps into the body under **Done when**, show it,
    and leave the issue open for the user; skip steps 4–5 and report «#N left open — the checklist is for you».
 4. **Plan gate** (see Gates) → show the plan: files, what changes in each, how it is checked; wait for «ok». No gate
@@ -113,8 +124,9 @@ Follow `## Plan`.
 2. Follow `## After commit`.
 3. Items only a deploy can verify → put them in the body under `<!-- gh-tasks:after-release -->` as an «After
    release» checklist; they do not block closing.
-4. `gh issue edit N --remove-label status:in-progress`, then `gh issue close N --reason completed`. No comment.
-   Not closing → say «#N left open — reason».
+4. `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --remove-label status:in-progress`,
+   then `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue close N --reason completed`.
+   No comment. Not closing → say «#N left open — reason».
 5. Follow `## Close`.
 
 ## 6. Report

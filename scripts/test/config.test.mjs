@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DEFAULTS, getConfigPath, loadConfig, parseRepoFromRemote, resolveRepo, validateConfig } from "../config.mjs";
+import {
+    DEFAULTS, getConfigPath, getLocalConfigPath, isLogin, loadConfig, loadLocalConfig, parseRepoFromRemote, resolveRepo,
+    validateConfig, validateLocalConfig,
+} from "../config.mjs";
 
 describe("validateConfig", () => {
     test("1. empty object → defaults, no errors or warnings", () => {
@@ -85,6 +88,48 @@ describe("validateConfig", () => {
 
     test("25. an invalid field falls back to its default", () => {
         assert.equal(validateConfig({ milestones: "yes" }).config.milestones, true);
+    });
+});
+
+describe("isLogin", () => {
+    [
+        ["ArtyomTalonchick", true],
+        ["a", true],
+        ["user-1", true],
+        ["a".repeat(39), true],
+        ["a".repeat(40), false],
+        ["-user", false],
+        ["user-", false],
+        ["us--er", false],
+        ["user_name", false],
+        ["", false],
+        [42, false],
+    ].forEach(([value, expected], i) => {
+        test(`${i + 1}. ${JSON.stringify(value)} → ${expected}`, () => {
+            assert.equal(isLogin(value), expected);
+        });
+    });
+});
+
+describe("validateLocalConfig", () => {
+    test("1. an account is kept", () => {
+        assert.deepEqual(validateLocalConfig({ account: "user" }), { local: { account: "user" }, errors: [], warnings: [] });
+    });
+
+    test("2. empty object → no account, no defaults", () => {
+        assert.deepEqual(validateLocalConfig({}), { local: {}, errors: [], warnings: [] });
+    });
+
+    test("3. invalid login → error", () => {
+        assert.match(validateLocalConfig({ account: "user name" }).errors[0], /^"account" must be a GitHub login/);
+    });
+
+    test("4. unknown field → warning", () => {
+        assert.deepEqual(validateLocalConfig({ language: "ru" }).warnings, ["unknown field \"language\" is ignored"]);
+    });
+
+    test("5. not an object → error", () => {
+        assert.deepEqual(validateLocalConfig([]).errors, ["the local config must be a JSON object"]);
     });
 });
 
@@ -187,5 +232,34 @@ describe("loadConfig", () => {
 
     test("11. resolveRepo: no config and no remote → throws", () => {
         assert.throws(() => resolveRepo(makeProject(), noRemote), /no config/);
+    });
+
+    const writeLocal = (dir, content) => {
+        fs.mkdirSync(path.dirname(getLocalConfigPath(dir)), { recursive: true });
+        fs.writeFileSync(getLocalConfigPath(dir), content);
+        return dir;
+    };
+
+    test("12. no local config → no account", () => {
+        const { config, errors } = loadConfig(makeProject("{ \"repo\": \"owner/name\" }"), noRemote);
+        assert.deepEqual(errors, []);
+        assert.equal("account" in config, false);
+    });
+
+    test("13. the account comes from the local config", () => {
+        const dir = writeLocal(makeProject("{ \"repo\": \"owner/name\" }"), "{ \"account\": \"user\" }");
+        assert.equal(loadConfig(dir, noRemote).config.account, "user");
+    });
+
+    test("14. an invalid local config makes the config invalid, the error names the file", () => {
+        const dir = writeLocal(makeProject("{ \"repo\": \"owner/name\" }"), "{ \"account\": 1 }");
+        const { config, errors } = loadConfig(dir, noRemote);
+        assert.equal(config, null);
+        assert.match(errors[0], /"account" must be .* in .*config\.local\.json$/);
+    });
+
+    test("15. loadLocalConfig: broken JSON → error, missing file → empty", () => {
+        assert.match(loadLocalConfig(writeLocal(makeProject(), "{")).errors[0], /is not valid JSON/);
+        assert.deepEqual(loadLocalConfig(makeProject()), { local: {}, errors: [], warnings: [] });
     });
 });

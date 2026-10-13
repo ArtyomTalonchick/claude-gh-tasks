@@ -9,7 +9,7 @@
  *   node scripts/milestone.mjs close        --project <dir> --title v1.3.9
  *   node scripts/milestone.mjs next-version --project <dir>
  *
- * Issues go in and out of a milestone with plain gh: `gh issue edit N --milestone v1.3.9` / `--remove-milestone`.
+ * Issues go in and out of a milestone with gh.mjs: `issue edit N --milestone v1.3.9` / `--remove-milestone`.
  *
  * Why a wrapper: only `gh api` can create, rewrite and close a milestone, and `gh api` can do anything the token
  * can. Here the API path is built only by milestoneCore, so this script is allowed and `gh api` is denied. There is
@@ -24,6 +24,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { runIfMain } from "./cli.mjs";
 import { loadConfig } from "./config.mjs";
+import { ghEnv } from "./gh.mjs";
 import {
     buildApiArgs, findMilestone, getDueOn, getLatestVersion, getMilestoneStatus, getNextPatch, getOpenMilestones,
     isMilestoneTitle, PAGE_SIZE, parseVersionOutput, splitCommand,
@@ -31,9 +32,9 @@ import {
 
 const EXIT_NO_VERSION = 2;
 
-const run = (file, args, { input, cwd } = {}) => {
+const run = (file, args, { input, cwd, env } = {}) => {
     try {
-        return execFileSync(file, args, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], input, cwd });
+        return execFileSync(file, args, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], input, cwd, env });
     } catch (error) {
         if (error.code === "ENOENT") {
             const hint = process.platform === "win32" ? " (on Windows the command must start with an executable such as node)" : "";
@@ -42,8 +43,6 @@ const run = (file, args, { input, cwd } = {}) => {
         throw new Error(`${[file, ...args.slice(0, 2)].join(" ")} failed: ${(error.stderr || error.message).trim()}`);
     }
 };
-
-const gh = (args, input) => run("gh", args, { input });
 
 const formatHeader = (milestone) => [
     `${milestone.title} (${getMilestoneStatus(milestone)})`,
@@ -63,6 +62,8 @@ const createContext = (args) => {
     if (errors.length) throw new Error(`${errors.join("\n")}\nRun /gh-tasks:setup to create or fix the config.`);
     if (!config.milestones) throw new Error("milestones are off in .claude/gh-tasks/config.json (\"milestones\": false)");
     const { repo } = config;
+    const env = ghEnv(projectDir);
+    const gh = (ghArgs, input) => run("gh", ghArgs, { input, env });
 
     // The only door to gh api
     const api = (method, { number, page, payload } = {}) => JSON.parse(gh(

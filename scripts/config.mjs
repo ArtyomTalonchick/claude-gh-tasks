@@ -1,6 +1,8 @@
 /*
- * The project config of gh-tasks: `.claude/gh-tasks/config.json`. This file is the schema — defaults, types and
- * validation live here, and skills read the effective config from `check` instead of guessing defaults.
+ * The project config of gh-tasks: `.claude/gh-tasks/config.json`, committed, plus the git-ignored
+ * `.claude/gh-tasks/config.local.json` for what differs per person — the gh account. This file is the schema —
+ * defaults, types and validation live here, and skills read the effective config from `check` instead of guessing
+ * defaults.
  *
  *   node scripts/config.mjs check --project <dir>
  *
@@ -14,6 +16,7 @@ import { parseArgs } from "node:util";
 import { runIfMain } from "./cli.mjs";
 
 export const getConfigPath = (projectDir) => path.join(projectDir, ".claude", "gh-tasks", "config.json");
+export const getLocalConfigPath = (projectDir) => path.join(projectDir, ".claude", "gh-tasks", "config.local.json");
 
 export const DEFAULTS = Object.freeze({
     language: "en",
@@ -33,6 +36,11 @@ export const DEFAULTS = Object.freeze({
 const REPO_PATTERN = /^[A-Za-z0-9-]+\/(?!\.\.?$)[A-Za-z0-9._-]+$/;
 
 export const isRepo = (value) => typeof value === "string" && REPO_PATTERN.test(value);
+
+// A GitHub login: letters, digits and single inner hyphens, up to 39 characters
+const LOGIN_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
+
+export const isLogin = (value) => typeof value === "string" && LOGIN_PATTERN.test(value);
 
 const isPlainObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const isNonEmptyString = (value) => typeof value === "string" && value.trim() !== "";
@@ -64,6 +72,10 @@ const SCHEMA = {
         },
     },
     issueTemplate: { fields: { extraLines: stringList } },
+};
+
+const LOCAL_SCHEMA = {
+    account: { check: isLogin, expected: "a GitHub login" },
 };
 
 // Keeps only known, well-typed fields; everything else becomes an error or a warning
@@ -118,6 +130,17 @@ export const validateConfig = (raw) => {
     return { config, errors, warnings };
 };
 
+/**
+ * Validates a parsed config.local.json. Pure. No defaults: a missing `account` means the active gh account.
+ * @returns {{ local: object, errors: string[], warnings: string[] }}
+ */
+export const validateLocalConfig = (raw) => {
+    const errors = [];
+    const warnings = [];
+    if (!isPlainObject(raw)) return { local: {}, errors: ["the local config must be a JSON object"], warnings };
+    return { local: pickValid(raw, LOCAL_SCHEMA, "", errors, warnings), errors, warnings };
+};
+
 // github.com only: gh would send another host's owner/name to github.com
 const REMOTE_PATTERNS = [
     // scp-like: git@github.com:owner/name.git
@@ -144,29 +167,54 @@ const getOriginUrl = (projectDir) => execFileSync("git", ["-C", projectDir, "rem
     stdio: ["ignore", "pipe", "ignore"],
 }).trim();
 
+/** @returns {{ raw?: unknown, missing?: true, error?: string }} */
+const readJson = (file) => {
+    let text;
+    try {
+        text = fs.readFileSync(file, "utf8");
+    } catch {
+        return { missing: true };
+    }
+    try {
+        // Editors on Windows may save a BOM, JSON.parse rejects it
+        return { raw: JSON.parse(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text) };
+    } catch (error) {
+        return { error: `${file} is not valid JSON: ${error.message}` };
+    }
+};
+
 /**
- * Reads, validates and completes the config of a project; `repo` falls back to the `origin` remote.
+ * Reads and validates config.local.json; a missing file is an empty local config.
+ * @returns {{ local: object, errors: string[], warnings: string[] }}
+ */
+export const loadLocalConfig = (projectDir) => {
+    const file = getLocalConfigPath(projectDir);
+    const { raw, missing, error } = readJson(file);
+    if (missing) return { local: {}, errors: [], warnings: [] };
+    if (error) return { local: {}, errors: [error], warnings: [] };
+    const { local, errors, warnings } = validateLocalConfig(raw);
+    const where = (message) => `${message} in ${file}`;
+    return { local, errors: errors.map(where), warnings: warnings.map(where) };
+};
+
+/**
+ * Reads, validates and completes the config of a project; `repo` falls back to the `origin` remote, `account`
+ * comes from config.local.json.
  * @param {string} projectDir
  * @param {{ getRemoteUrl?: (projectDir: string) => string }} [options] injectable for tests
  * @returns {{ config: object | null, errors: string[], warnings: string[] }}
  */
 export const loadConfig = (projectDir, { getRemoteUrl = getOriginUrl } = {}) => {
     const configPath = getConfigPath(projectDir);
-    let text;
-    try {
-        text = fs.readFileSync(configPath, "utf8");
-    } catch {
-        return { config: null, errors: [`no config at ${configPath}`], warnings: [] };
-    }
-    let raw;
-    try {
-        // Editors on Windows may save a BOM, JSON.parse rejects it
-        raw = JSON.parse(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
-    } catch (error) {
-        return { config: null, errors: [`${configPath} is not valid JSON: ${error.message}`], warnings: [] };
-    }
+    const { raw, missing, error } = readJson(configPath);
+    if (missing) return { config: null, errors: [`no config at ${configPath}`], warnings: [] };
+    if (error) return { config: null, errors: [error], warnings: [] };
 
     const { config, errors, warnings } = validateConfig(raw);
+    const local = loadLocalConfig(projectDir);
+    errors.push(...local.errors);
+    warnings.push(...local.warnings);
+    Object.assign(config, local.local);
     if (!config.repo && !errors.length) {
         const repo = readOriginRepo(projectDir, getRemoteUrl);
         if (repo) config.repo = repo;

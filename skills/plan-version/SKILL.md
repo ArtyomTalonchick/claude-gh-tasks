@@ -7,8 +7,8 @@ allowed-tools: >-
   Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" *)
-  Bash(gh issue *) PowerShell(gh issue *)
-  Bash(gh search issues *) PowerShell(gh search issues *)
+  Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
+  PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
 ---
 
 # gh-tasks plan-version
@@ -18,6 +18,9 @@ Arguments: `$ARGUMENTS` — optional `auto`.
 Run the plugin scripts exactly as written, quotes included:
 `node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" <command> --project "${CLAUDE_PROJECT_DIR}" …`. Talk to the user in
 their language; the milestone description, titles and comments are in `config.language`.
+
+Every other GitHub call goes through `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}"`,
+written exactly as below, never plain `gh`: the wrapper runs as the project's gh account.
 
 ## 1. Config
 
@@ -40,15 +43,16 @@ the scope. A missing file or heading is skipped silently.
 
 ## 3. Candidates
 
-`gh issue list --state open --limit 200 --json number,title,labels,milestone,body`. Candidates: open issues with no
-milestone, plus the issues of the open milestone.
+`node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue list --state open --limit 200 --json number,title,labels,milestone,body`.
+Candidates: open issues with no milestone, plus the issues of the open milestone.
 
 - Untriaged candidates (`status:inbox`, or missing a `type:*`, `prio:*` or `size:*` label) go through steps 2–5 of
   `${CLAUDE_PLUGIN_ROOT}/skills/triage/SKILL.md` first. Without `auto` nothing is written yet: their triage table is
   part of the gate in step 6. With `auto` they are triaged as `triage auto` does.
-- Issues closed as completed with no milestone since the previous milestone was closed
-  (`gh issue list --state closed --search "no:milestone reason:completed closed:>=<its release time>"`, the time as
-  `milestone.mjs list` prints it) ship in this release: assign them too and list them in the gate under «Already done».
+- Issues closed as completed with no milestone since the previous milestone was closed ship in this release:
+  assign them too and list them in the gate under «Already done». Find them with
+  `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue list --state closed --search "no:milestone reason:completed closed:>=<its release time>"`,
+  the time as `milestone.mjs list` prints it.
 - Always in: `status:in-progress`, `prio:critical`. Always out: `prio:backlog`, issues whose triage outcome is
   «duplicate» or «not doing».
 
@@ -94,8 +98,10 @@ report.
 3. New milestone: `milestone.mjs create --title <vX.Y.Z> --file <file>`, plus `--due <YYYY-MM-DD>` with an agreed
    date. Replan: `milestone.mjs describe --title <vX.Y.Z> --file <file>`.
 4. Delete the temporary file.
-5. Each issue in the groups: `gh issue edit N --milestone <vX.Y.Z>`. Each issue of the open milestone now left out:
-   `gh issue edit N --remove-milestone`.
+5. Each issue in the groups:
+   `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --milestone <vX.Y.Z>`.
+   Each issue of the open milestone now left out:
+   `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --remove-milestone`.
 6. Verify: `milestone.mjs show --title <vX.Y.Z>` lists exactly the issues of the description. GitHub lists issues
    by milestone with a delay of a few seconds: on a mismatch run `show` once more, and only then fix it, not report
    it.

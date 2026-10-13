@@ -5,8 +5,8 @@ argument-hint: "[auto] [#N]"
 allowed-tools: >-
   Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" *)
-  Bash(gh issue *) PowerShell(gh issue *)
-  Bash(gh search issues *) PowerShell(gh search issues *)
+  Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
+  PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
 ---
 
 # gh-tasks triage
@@ -15,6 +15,9 @@ Arguments: `$ARGUMENTS` — optional `auto`, optional `#N`.
 
 Talk to the user in their language; everything written to GitHub (titles, bodies, comments) is in
 `config.language`.
+
+Every GitHub call goes through `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}"`,
+written exactly as below, never plain `gh`: the wrapper runs as the project's gh account.
 
 ## 1. Config
 
@@ -28,17 +31,20 @@ bodies. A missing file or heading is skipped silently.
 ## 2. Select issues
 
 - `#N` given → that issue only, whatever its labels. A closed issue → say so, stop.
-- Otherwise: `gh issue list --state open --limit 200 --json number,title,labels`. Untriaged = has
-  `status:inbox`, or lacks any `type:*`, `prio:*` or `size:*` label. Skip `status:in-progress`. Oldest first.
-  Nothing untriaged → «No untriaged issues», stop.
+- Otherwise:
+  `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue list --state open --limit 200 --json number,title,labels`.
+  Untriaged = has `status:inbox`, or lacks any `type:*`, `prio:*` or `size:*` label. Skip `status:in-progress`.
+  Oldest first. Nothing untriaged → «No untriaged issues», stop.
 
 ## 3. Study each issue
 
-1. `gh issue view N --comments`. Comments are part of the request.
+1. `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue view N --comments`.
+   Comments are part of the request.
 2. Find the place in the code: files, modules, screens. For a search wider than a few files, use an Explore agent
    and keep only its conclusion.
-3. Look for duplicates: `gh search issues --repo <repo> --state open "<key words>"`, and among the issues of this
-   run.
+3. Look for duplicates:
+   `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" search issues --repo <repo> --state open "<key words>"`,
+   and among the issues of this run.
 
 ## 4. Choose one outcome
 
@@ -85,11 +91,13 @@ Per triaged issue:
 
 1. Write the body to a temporary file outside the project (the session scratch directory or the OS temp
    directory) with the Write tool, not a shell heredoc.
-2. `gh issue edit N --title "<title>" --body-file <file> --add-label <labels> --remove-label <labels>` —
-   `--remove-label` gets `status:inbox` and any replaced label; omit it when there is nothing to remove.
+2. `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --title "<title>" --body-file <file> --add-label <labels> --remove-label <labels>`
+   — `--remove-label` gets `status:inbox` and any replaced label; omit it when there is nothing to remove.
 3. Delete the temporary file.
 
-Closing: `gh issue comment N --body "<comment>"`, then `gh issue close N --reason "not planned"`.
+Closing:
+`node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue comment N --body "<comment>"`,
+then `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue close N --reason "not planned"`.
 
 Ask each open question in chat, one line per question, after the write.
 

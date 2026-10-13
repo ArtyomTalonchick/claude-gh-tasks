@@ -4,6 +4,9 @@
 
 - README: requirements, install, the cycle of skills with their flags, the config fields, `rules.md` and the
   permissions `setup` adds.
+- gh account per project: with several gh accounts logged in, `setup` asks which one the project uses and keeps it
+  in the git-ignored `.claude/gh-tasks/config.local.json`; every GitHub call goes through `scripts/gh.mjs`, which
+  acts as that account without switching the active one.
 
 ## 0.1.2 — 2026-10-13
 

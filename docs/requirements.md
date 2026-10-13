@@ -14,8 +14,9 @@ file keeps the decisions and their reasons.
 **In v1**
 
 - Skills: `setup`, `triage`, `plan-version`, `next-task`, `commit`.
-- Scripts: `labels.mjs`, `milestone.mjs` (+ `milestoneCore.mjs`), `config.mjs`.
-- Project files: `.claude/gh-tasks/config.json`, `.claude/gh-tasks/rules.md`.
+- Scripts: `labels.mjs`, `milestone.mjs` (+ `milestoneCore.mjs`), `config.mjs`, `gh.mjs`.
+- Project files: `.claude/gh-tasks/config.json`, `.claude/gh-tasks/rules.md`, the git-ignored
+  `.claude/gh-tasks/config.local.json`.
 - Docs: `README.md`, `docs/requirements.md`, `docs/extension-points.md`, `CHANGELOG.md`.
 
 **Out of v1** (later plugins or later versions)
@@ -72,6 +73,7 @@ file keeps the decisions and their reasons.
 | Q39 | `auto` across skills | `setup`, `triage`, `plan-version` and `next-task` take `auto`: it skips the confirmation gates but never deletes or closes, never invents what only the user knows, never touches the remote; `next-task auto` closes only the issue it has just committed. `setup auto`: proposed values, labels and permissions applied, foreign labels only listed. `plan-version auto`: milestone written and issues assigned without the gate, version from `next-version` (no version yet → still asks), untriaged candidates through `triage auto`, the report shows every choice. `next-task auto`: Q40. `commit` has no `auto`: its gate stays (Q25), `next-task auto` is the only exception |
 | Q40 | `next-task` gates | Three levels. Default: the plan is shown only when there are questions, the final diff always waits for «ok». `plan`: the plan always waits for «ok». `auto`: no gates, commits without approval. `plan auto`: plan gate, then no diff gate. `auto` refuses to run without `checks`, stops on a dirty tree or a stuck `status:in-progress`, skips tasks with open questions and `type:ops` tasks, writes new questions into the issue instead of asking, commits only with green checks, and ends with a report of every commit and every closed or skipped issue. A project that always wants the plan gate says so under `## Plan` |
 | Q41 | Failing checks and stopping `loop` | Checks still failing after 3 fix attempts → stop and show the failure, the task stays `status:in-progress`, `loop` ends: the uncommitted change blocks the next task. «ok, stop» on the shown diff commits, closes and ends `loop`; `loop` also ends when no task is left |
+| Q42 | gh account | Per project, per user: `account` (a GitHub login) in the git-ignored `.claude/gh-tasks/config.local.json`, asked by `setup` when gh has more than one login. Not in `config.json`: collaborators use different accounts. Every GitHub call of the plugin goes through `scripts/gh.mjs`, which runs `gh` with `GH_TOKEN` read from the gh keyring (`gh auth token --user <login>`) for its own process only. `gh auth switch` is not used: the active account is global and would race between parallel sessions; stopping on a wrong active account is rejected for the same reason. `gh.mjs` allows only `gh issue` (not `delete` / `transfer`), `gh label` and `gh search issues`, because a permission rule matches only the `node …` command line. No `account` → the active account |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
 
@@ -110,6 +112,7 @@ claude-gh-tasks/                    repository and folder; the plugin and the ma
     labels.mjs        create/update labels, rename map, list extras; never deletes without --delete
     milestone.mjs     list / show / create / describe / close / next-version
     milestoneCore.mjs the only place that builds the `repos/<repo>/milestones` API path
+    gh.mjs            gh issue / label / search issues as the project's account; `accounts` lists the logins
     test/*.test.mjs   node --test
   docs/
     requirements.md   this file
@@ -210,6 +213,14 @@ issue.
 Rules: unknown fields → warning; wrong types → error; `version.command` must print the next version on the
 first line of stdout. Defaults are applied by `config.mjs`, skills never guess them.
 
+`.claude/gh-tasks/config.local.json` — per user, git-ignored, validated by the same `check` (Q42):
+
+```jsonc
+{
+  "account": "login"                    // optional; the gh account the plugin acts as; default: the active one
+}
+```
+
 ## 7. Extension points: `.claude/gh-tasks/rules.md`
 
 Prose, read by the skills at fixed moments. Headings are the contract (English, level 2); content is in any
@@ -264,7 +275,8 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
 2. Questions, one block: milestones yes/no; version scheme (`patch` or a command); language; checks
    (proposed from `package.json` scripts); commit format (proposed from the last ~30 `git log` subjects:
    detected convention, or conventional commits if none, with suggested improvements); existing project
-   `commit` skill → absorb and delete, or keep (Q31).
+   `commit` skill → absorb and delete, or keep (Q31); gh account when `gh.mjs accounts` lists more than one login
+   (Q42) — written to `config.local.json` before the labels, and the file is added to `.gitignore`.
 3. Labels: `labels.mjs apply --dry-run` → show the plan and ask which foreign labels to delete (all / some /
    none) → `labels.mjs apply [--delete <names>]`: renames where safe, create/update ours, delete only the names
    the user chose (Q33, Q34).
@@ -272,7 +284,8 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
    paragraph into the project `CLAUDE.md` («Tasks live in GitHub Issues, workflow by the gh-tasks plugin;
    config in `.claude/gh-tasks/`; a task created from chat gets `status:inbox`»).
 5. Permissions: show the block and, after confirmation, merge into the project `.claude/settings.json`:
-   allow `Bash(gh issue *)`, `Bash(gh label *)`, `Bash(gh search issues *)`, the plugin scripts; deny
+   allow `Bash(gh issue *)`, `Bash(gh label *)`, `Bash(gh search issues *)`, the plugin scripts (`gh.mjs`
+   included); deny
    `Bash(gh api *)`, `gh repo *`, `gh pr *`, `gh workflow *`, `gh secret *`, `gh variable *`, `gh auth *`.
    Both `Bash(...)` and `PowerShell(...)` forms on Windows. Why deny `gh api`: the `gh auth` token can do
    anything through it, and a permission rule cannot narrow it; `milestone.mjs` is the only door, with the
@@ -288,7 +301,8 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
   live in this file and in `CHANGELOG.md`.
 - The word for the person is «the user»; approval semantics are the same whoever runs the session.
 - Scripts: tests for every pure function (`node --test`), ESLint clean, `claude plugin validate .` clean.
-- Scripts never print secrets; `gh` is called through `execFileSync` with argument arrays, never a shell string.
+- Scripts never print secrets — the token `gh.mjs` reads stays in the child's environment; `gh` is called
+  through `execFileSync` with argument arrays, never a shell string.
 - Windows and POSIX: paths through `node:path`, no shell-specific syntax in skills' commands.
 - A skill fails loudly: missing config, missing `gh`, no open milestone — one sentence and the next command.
 

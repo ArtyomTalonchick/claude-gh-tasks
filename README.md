@@ -5,7 +5,7 @@ triage incoming issues → plan a release as a milestone → take the next task 
 
 Skills: `/gh-tasks:setup`, `/gh-tasks:triage`, `/gh-tasks:plan-version`, `/gh-tasks:next-task`, `/gh-tasks:commit`.
 
-Status: v0.1.2 — all five skills and the scripts behind them (`config`, `labels`, `milestone`); see
+Status: v0.1.2 — all five skills and the scripts behind them (`config`, `labels`, `milestone`, `gh`); see
 `CHANGELOG.md`.
 
 ## Requirements
@@ -27,6 +27,8 @@ repository gets it. `/gh-tasks:setup` asks its questions in one message, each wi
 or change single items. It then:
 
 - writes `.claude/gh-tasks/config.json` and creates `.claude/gh-tasks/rules.md` with empty headings;
+- with several gh accounts logged in, asks which one this project uses and writes it to the git-ignored
+  `.claude/gh-tasks/config.local.json`;
 - creates the labels `status:*`, `type:*`, `prio:*`, `size:*` and lists the labels it does not own; it deletes
   only the ones you name;
 - adds a short gh-tasks note to the project `CLAUDE.md`;
@@ -77,6 +79,11 @@ release.
 | `commit` | `format`, `example`, `types` and `trailers` of commit messages | `type(scope): subject`, no trailers |
 | `issueTemplate.extraLines` | extra lines of the issue body template, e.g. «Who is affected» | `[]` |
 
+`.claude/gh-tasks/config.local.json` is per user and git-ignored: `{ "account": "<login>" }` is the gh account the
+plugin acts as in this project. Every GitHub call of the plugin goes through `scripts/gh.mjs`, which runs `gh` with
+that account's stored token for its own process only — the active gh account stays as it is, so sessions in
+different projects do not get in each other's way. No file or no `account` → the active account is used.
+
 `.claude/gh-tasks/rules.md` holds what a field cannot express: prose rules under fixed headings (`## Pick`,
 `## Plan`, `## Implement`, `## Verify`, `## Commit`, `## After commit`, `## Close`, `## Triage`,
 `## Plan version`), each read by a skill at a fixed moment, in any language. An empty heading is skipped. The
@@ -87,11 +94,12 @@ contract and an example for each heading: [`docs/extension-points.md`](docs/exte
 `setup` adds to the project `.claude/settings.json` (the `PowerShell(...)` twins only on Windows):
 
 - **allow** — `gh issue *`, `gh label *`, `gh search issues *` and the plugin scripts `config.mjs`, `labels.mjs`,
-  `milestone.mjs`, so the cycle runs without a prompt on every call;
+  `milestone.mjs`, `gh.mjs`, so the cycle runs without a prompt on every call;
 - **deny** — `gh api *`, `gh repo *`, `gh pr *`, `gh workflow *`, `gh secret *`, `gh variable *`, `gh auth *`.
 
 `gh api` is denied because its token can do anything and a permission rule cannot narrow it to one endpoint.
-Milestones go through `scripts/milestone.mjs` instead, which only reaches `repos/<repo>/milestones`.
+Milestones go through `scripts/milestone.mjs` instead, which only reaches `repos/<repo>/milestones`. `gh.mjs` runs
+only `gh issue` (except `delete` and `transfer`), `gh label` and `gh search issues`.
 
 ## Development
 

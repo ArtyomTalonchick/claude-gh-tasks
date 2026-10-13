@@ -10,6 +10,8 @@ allowed-tools: >-
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" *)
+  Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
+  PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
   Bash(gh label list *) PowerShell(gh label list *)
   Bash(git log *) PowerShell(git log *)
   Bash(git remote get-url *) PowerShell(git remote get-url *)
@@ -61,6 +63,10 @@ the current value), so the user can reply «ok» or change single items:
 - **Project commit skill** — only if `.claude/skills/commit/` exists: absorb its format rules into
   `config.commit` and delete it, or keep it (gh-tasks still commits only through `gh-tasks:commit`).
 - **Issue template extra lines** — only if the project obviously needs one (e.g. «who is affected»); else skip.
+- **Account** — the gh account the plugin acts as in this project, for this user only. Run
+  `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" accounts --project "${CLAUDE_PROJECT_DIR}"`: it lists the logged-in
+  logins, marks the active one and prints the configured one. Ask only when more than one login is listed or one
+  is configured; propose the configured login, else the active one. «none» → the active account is used.
 
 `auto`: send no questions; take each proposed answer (in update mode the current value). A project commit skill
 is kept; issue template extra lines are skipped.
@@ -83,7 +89,11 @@ report.
    `milestones`, `version`, `checks`, `commit`), so the file documents the project's choices; add `repo` only if
    it differs from `origin` and `issueTemplate` only with extra lines. Plain JSON, two-space indent. In update
    mode keep fields the questions did not touch.
-2. **`.claude/gh-tasks/rules.md`** — create only if missing; never overwrite. Skeleton:
+2. **`.claude/gh-tasks/config.local.json`** — only when the Account question was asked: `{ "account": "<login>" }`,
+   or no `account` field for «none». Write it right after the answers, before step 3, so the labels are applied as
+   that account. Make sure the project `.gitignore` (created if missing) has the line
+   `.claude/gh-tasks/config.local.json`: the login is per user and is never committed.
+3. **`.claude/gh-tasks/rules.md`** — create only if missing; never overwrite. Skeleton:
 
    ```markdown
    # gh-tasks rules
@@ -120,11 +130,11 @@ report.
    ```
 
    In update mode with an existing file: add any missing headings at the end, leave the rest untouched.
-3. **Project `CLAUDE.md`** — append once (skip if a paragraph mentioning `gh-tasks` is already there):
+4. **Project `CLAUDE.md`** — append once (skip if a paragraph mentioning `gh-tasks` is already there):
    «Tasks live in GitHub Issues; the workflow is run by the gh-tasks plugin (`/gh-tasks:triage`,
    `/gh-tasks:plan-version`, `/gh-tasks:next-task`). Config and project rules: `.claude/gh-tasks/`. A task
    created from chat gets the `status:inbox` label.» Write it in the language the file already uses.
-4. Validate: `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"`. An error is
+5. Validate: `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"`. An error is
    fixed now, not reported as done.
 
 ## 5. Permissions
@@ -138,10 +148,10 @@ entries, never remove or reorder existing ones, keep the rest of the file as is.
     "allow": [
       "Bash(gh issue *)", "Bash(gh label *)", "Bash(gh search issues *)",
       "Bash(node *gh-tasks*/scripts/config.mjs*)", "Bash(node *gh-tasks*/scripts/labels.mjs*)",
-      "Bash(node *gh-tasks*/scripts/milestone.mjs*)",
+      "Bash(node *gh-tasks*/scripts/milestone.mjs*)", "Bash(node *gh-tasks*/scripts/gh.mjs*)",
       "PowerShell(gh issue *)", "PowerShell(gh label *)", "PowerShell(gh search issues *)",
       "PowerShell(node *gh-tasks*/scripts/config.mjs*)", "PowerShell(node *gh-tasks*/scripts/labels.mjs*)",
-      "PowerShell(node *gh-tasks*/scripts/milestone.mjs*)"
+      "PowerShell(node *gh-tasks*/scripts/milestone.mjs*)", "PowerShell(node *gh-tasks*/scripts/gh.mjs*)"
     ],
     "deny": [
       "Bash(gh api *)", "Bash(gh repo *)", "Bash(gh pr *)", "Bash(gh workflow *)",
@@ -155,7 +165,8 @@ entries, never remove or reorder existing ones, keep the rest of the file as is.
 
 The `PowerShell(...)` entries are for Windows; on other systems offer only the `Bash(...)` ones. Explain the deny
 of `gh api` in one line: its token can do anything and a rule cannot narrow it; milestones go through
-`milestone.mjs`, which only reaches `repos/<repo>/milestones`.
+`milestone.mjs`, which only reaches `repos/<repo>/milestones`. `gh.mjs` runs only `gh issue`, `gh label` and
+`gh search issues`, as the configured account, so allowing it opens nothing the deny list closes.
 
 Also check that `enabledPlugins` in the same file contains `"gh-tasks@gh-tasks": true`; if the plugin was installed
 in another scope, offer to add it so the project carries the plugin for everyone who clones it.

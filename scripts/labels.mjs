@@ -12,6 +12,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { runIfMain } from "./cli.mjs";
 import { resolveRepo } from "./config.mjs";
+import { ghEnv } from "./gh.mjs";
 
 // A colour must read in both GitHub themes: it is the chip background in the light one and the text colour in the
 // dark one, hence medium lightness. Priority is the only saturated group (hot → cold), so a list reads at a glance;
@@ -133,9 +134,9 @@ export const formatPlan = (plan, toDelete = []) => {
     ];
 };
 
-const gh = (args) => {
+const gh = (args, env) => {
     try {
-        return execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+        return execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env });
     } catch (error) {
         throw new Error(`gh ${args.slice(0, 2).join(" ")} failed: ${(error.stderr || error.message).trim()}`);
     }
@@ -154,9 +155,11 @@ const main = () => {
     });
     if (command !== "apply" || !values.project) throw new Error(USAGE);
 
-    const repo = resolveRepo(path.resolve(values.project));
+    const projectDir = path.resolve(values.project);
+    const repo = resolveRepo(projectDir);
+    const env = ghEnv(projectDir);
     const existing = JSON.parse(gh(["label", "list", "--repo", repo, "--limit", "1000",
-        "--json", "name,color,description"]));
+        "--json", "name,color,description"], env));
     const plan = planLabels(existing);
     const toDelete = [...new Set(values.delete)];
     const errors = checkDeletion(toDelete, plan);
@@ -169,12 +172,12 @@ const main = () => {
         return;
     }
 
-    plan.renames.forEach(({ from, to }) => gh(["label", "edit", from, "--name", to, "--repo", repo]));
+    plan.renames.forEach(({ from, to }) => gh(["label", "edit", from, "--name", to, "--repo", repo], env));
     plan.create.forEach(({ name, color, description }) => gh(["label", "create", name, "--repo", repo,
-        "--color", color, "--description", description]));
+        "--color", color, "--description", description], env));
     plan.update.forEach(({ name, current, color, description }) => gh(["label", "edit", current, "--repo", repo,
-        ...(current === name ? [] : ["--name", name]), "--color", color, "--description", description]));
-    toDelete.forEach((name) => gh(["label", "delete", name, "--repo", repo, "--yes"]));
+        ...(current === name ? [] : ["--name", name]), "--color", color, "--description", description], env));
+    toDelete.forEach((name) => gh(["label", "delete", name, "--repo", repo, "--yes"], env));
     console.log(`${repo}: done`);
     lines.forEach((line) => console.log(line));
 };
