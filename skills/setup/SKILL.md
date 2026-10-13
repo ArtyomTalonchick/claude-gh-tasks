@@ -144,7 +144,8 @@ report.
 ## 5. Permissions
 
 Show this block, and after the user confirms merge it into the project `.claude/settings.json`: add missing
-entries, never remove or reorder existing ones, keep the rest of the file as is.
+entries, never remove or reorder existing ones, keep the rest of the file as is. A missing entry goes right after
+the existing entry that precedes it in the block; none exists → at the end of its list.
 
 ```json
 {

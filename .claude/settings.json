@@ -10,12 +10,14 @@
       "Bash(node *gh-tasks*/scripts/config.mjs*)",
       "Bash(node *gh-tasks*/scripts/labels.mjs*)",
       "Bash(node *gh-tasks*/scripts/milestone.mjs*)",
+      "Bash(node *gh-tasks*/scripts/gh.mjs*)",
       "PowerShell(gh issue *)",
       "PowerShell(gh label *)",
       "PowerShell(gh search issues *)",
       "PowerShell(node *gh-tasks*/scripts/config.mjs*)",
       "PowerShell(node *gh-tasks*/scripts/labels.mjs*)",
-      "PowerShell(node *gh-tasks*/scripts/milestone.mjs*)"
+      "PowerShell(node *gh-tasks*/scripts/milestone.mjs*)",
+      "PowerShell(node *gh-tasks*/scripts/gh.mjs*)"
     ],
     "deny": [
       "Bash(gh api *)",
