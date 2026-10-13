@@ -14,7 +14,7 @@ file keeps the decisions and their reasons.
 **In v1**
 
 - Skills: `setup`, `triage`, `plan-version`, `next-task`, `commit`.
-- Scripts: `labels.mjs`, `milestone.mjs` (+ `milestoneCore.mjs`), `config.mjs`, `gh.mjs`.
+- Scripts: `labels.mjs`, `milestone.mjs` (+ `milestoneCore.mjs`), `config.mjs`, `gh.mjs`, `cli.mjs`.
 - Project files: `.claude/gh-tasks/config.json`, `.claude/gh-tasks/rules.md`, the git-ignored
   `.claude/gh-tasks/config.local.json`.
 - Docs: `README.md`, `docs/requirements.md`, `docs/extension-points.md`, `CHANGELOG.md`.
@@ -113,6 +113,7 @@ claude-gh-tasks/                    repository and folder; the plugin and the ma
     milestone.mjs     list / show / create / describe / close / next-version
     milestoneCore.mjs the only place that builds the `repos/<repo>/milestones` API path
     gh.mjs            gh issue / label / search issues as the project's account; `accounts` lists the logins
+    cli.mjs           shared entry: runs `main` only when executed directly, an error → one stderr line, exit 1
     test/*.test.mjs   node --test
   docs/
     requirements.md   this file

@@ -5,12 +5,11 @@ triage incoming issues → plan a release as a milestone → take the next task 
 
 Skills: `/gh-tasks:setup`, `/gh-tasks:triage`, `/gh-tasks:plan-version`, `/gh-tasks:next-task`, `/gh-tasks:commit`.
 
-Status: v0.1.2 — all five skills and the scripts behind them (`config`, `labels`, `milestone`, `gh`); see
-`CHANGELOG.md`.
+Released versions and their changes: [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Requirements
 
-- [GitHub CLI](https://cli.github.com), logged in (`gh auth login`).
+- [GitHub CLI](https://cli.github.com) 2.70 or newer, logged in (`gh auth login`).
 - Node.js 20 or newer.
 - A git repository whose `origin` points to GitHub (or `repo` set in the config).
 
