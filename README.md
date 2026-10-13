@@ -82,7 +82,8 @@ release.
 `.claude/gh-tasks/config.local.json` is per user and git-ignored: `{ "account": "<login>" }` is the gh account the
 plugin acts as in this project. Every GitHub call of the plugin goes through `scripts/gh.mjs`, which runs `gh` with
 that account's stored token for its own process only — the active gh account stays as it is, so sessions in
-different projects do not get in each other's way. No file or no `account` → the active account is used.
+different projects do not get in each other's way. No file or no `account` → the active account is used. Every
+`gh.mjs` call runs against `config.repo`, so a project with several remotes works without `gh repo set-default`.
 
 `.claude/gh-tasks/rules.md` holds what a field cannot express: prose rules under fixed headings (`## Pick`,
 `## Plan`, `## Implement`, `## Verify`, `## Commit`, `## After commit`, `## Close`, `## Triage`,

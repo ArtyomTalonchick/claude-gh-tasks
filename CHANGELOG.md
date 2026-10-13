@@ -7,6 +7,8 @@
 - gh account per project: with several gh accounts logged in, `setup` asks which one the project uses and keeps it
   in the git-ignored `.claude/gh-tasks/config.local.json`; every GitHub call goes through `scripts/gh.mjs`, which
   acts as that account without switching the active one.
+- Every `gh.mjs` call runs against `config.repo`: a `repo` that differs from `origin` is honoured, and a project with
+  two GitHub remotes no longer stops on «unable to determine base repository».
 
 ## 0.1.2 — 2026-10-13
 

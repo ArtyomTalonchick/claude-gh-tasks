@@ -8,14 +8,16 @@
  *   node scripts/gh.mjs --project <dir> search issues …
  *   node scripts/gh.mjs accounts --project <dir>
  *
- * gh output and exit code pass through. A permission rule sees only `node …gh.mjs`, so the subcommands are checked
- * here, and the token is never printed. `accounts` lists the logins of github.com and marks the active one.
+ * Every call runs against the project's repository (`config.repo`, else the `origin` remote): `--repo` is added
+ * unless the arguments carry `--repo` or `-R`. gh output and exit code pass through. A permission rule sees only
+ * `node …gh.mjs`, so the subcommands are checked here, and the token is never printed.
+ * `accounts` lists the logins of github.com and marks the active one.
  */
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { runIfMain } from "./cli.mjs";
-import { loadLocalConfig } from "./config.mjs";
+import { loadLocalConfig, resolveRepo } from "./config.mjs";
 
 const HOST = "github.com";
 
@@ -34,6 +36,23 @@ export const checkGhArgs = (args) => {
     }
     if (command === "search" && subcommand === "issues") return null;
     return `only gh issue, gh label and gh search issues run through gh-tasks, got: gh ${args.slice(0, 2).join(" ")}`;
+};
+
+// flags only: an argument after `--` is a value, such as a search query
+const hasRepoFlag = (args) => {
+    const end = args.indexOf("--");
+    return (end === -1 ? args : args.slice(0, end))
+        .some((arg) => arg === "--repo" || arg.startsWith("--repo=") || arg.startsWith("-R"));
+};
+
+/**
+ * The gh arguments run against `repo`: `--repo <repo>` right after the subcommand, unless `--repo` or `-R` is given.
+ * Put before the rest, it can never land after a `--`.
+ */
+export const withRepo = (args, repo) => {
+    if (hasRepoFlag(args)) return args;
+    const [command, subcommand, ...rest] = args;
+    return [command, subcommand, "--repo", repo, ...rest];
 };
 
 /** `--project <dir>` first, then the gh arguments as they are. */
@@ -127,9 +146,11 @@ const main = () => {
     const refused = checkGhArgs(split.ghArgs);
     if (refused) throw new Error(refused);
 
-    const env = ghEnv(path.resolve(split.projectDir));
+    const projectDir = path.resolve(split.projectDir);
+    const ghArgs = withRepo(split.ghArgs, resolveRepo(projectDir));
+    const env = ghEnv(projectDir);
     try {
-        execFileSync("gh", split.ghArgs, { stdio: "inherit", env });
+        execFileSync("gh", ghArgs, { stdio: "inherit", env });
     } catch (error) {
         if (error.code === "ENOENT") throw new Error("gh not found: https://cli.github.com");
         // gh has printed its own error already

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getLocalConfigPath } from "../config.mjs";
-import { checkGhArgs, ghEnv, parseAccounts, splitArgs } from "../gh.mjs";
+import { checkGhArgs, ghEnv, parseAccounts, splitArgs, withRepo } from "../gh.mjs";
 
 describe("checkGhArgs", () => {
     [
@@ -58,6 +58,36 @@ describe("splitArgs", () => {
         test(`${i + 2}. no leading --project <dir> → null: ${JSON.stringify(argv)}`, () => {
             assert.equal(splitArgs(argv), null);
         });
+    });
+});
+
+describe("withRepo", () => {
+    const repo = "owner/name";
+
+    test("1. no repo flag → --repo right after the subcommand", () => {
+        assert.deepEqual(withRepo(["issue", "edit", "12", "--add-label", "x"], repo),
+            ["issue", "edit", "--repo", repo, "12", "--add-label", "x"]);
+    });
+
+    test("2. search issues gets the repo too", () => {
+        assert.deepEqual(withRepo(["search", "issues", "key words"], repo),
+            ["search", "issues", "--repo", repo, "key words"]);
+    });
+
+    [
+        ["issue", "list", "--repo", "other/repo"],
+        ["issue", "list", "--repo=other/repo"],
+        ["label", "list", "-R", "other/repo"],
+        ["label", "list", "-Rother/repo"],
+    ].forEach((args, i) => {
+        test(`${i + 3}. explicit repo kept as is: ${args.join(" ")}`, () => {
+            assert.deepEqual(withRepo(args, repo), args);
+        });
+    });
+
+    test("7. --repo after -- is a value, the repo is still added", () => {
+        assert.deepEqual(withRepo(["search", "issues", "--", "--repo"], repo),
+            ["search", "issues", "--repo", repo, "--", "--repo"]);
     });
 });
 
