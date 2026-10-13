@@ -61,7 +61,7 @@ file keeps the decisions and their reasons.
 | Q27 | Hooks | None in v1; the config check is the first step of every skill |
 | Q28 | Documents | This file, `README.md`, `docs/extension-points.md`; chat summaries may be in any language |
 | Q29 | Next version for `scheme: "patch"` | From GitHub milestones: highest `vX.Y.Z` title (open or closed) + 1 on patch; no milestones yet → ask the user for the first version. Git tags are not read; a project that tags uses `scheme: "command"` |
-| Q30 | Issue creation skill | None. Issues are created on GitHub by hand or by asking in chat (`gh issue create --label status:inbox`); an open issue without type, priority and size is untriaged |
+| Q30 | Issue creation skill | None. Issues are created on GitHub by hand or by asking in chat; an open issue without type, priority and size is untriaged. A chat issue goes through `gh.mjs … issue create --label status:inbox`, so it is written as the project's account (Q42). The `CLAUDE.md` paragraph names the wrapper by its role — the `scripts/gh.mjs` of the installed gh-tasks plugin, under `~/.claude/plugins/cache/gh-tasks/` — not by a path or a glob: the cache path changes with every version, and a glob is not runnable. `setup` replaces an older gh-tasks paragraph that does not name `gh.mjs` |
 | Q31 | Project `commit` skill | The plugin ships `commit`. `setup` detects a project `.claude/skills/commit` and asks: absorb its format rules into `config.commit` and delete it, or leave it (then `next-task` still commits only through `gh-tasks:commit`) |
 | Q32 | Install scope | Project scope (`enabledPlugins` in the project `.claude/settings.json`, committed). Not user scope: that would inject `/next-task` into projects with their own, e.g. prosportcards |
 | Q33 | Label renames: propose or apply | Both: `setup` runs `labels.mjs apply --dry-run`, shows the plan (renames, conflicts, creates, updates, foreign labels), and runs `apply` after the user's «yes» |
@@ -283,7 +283,8 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
    the user chose (Q33, Q34).
 4. Write `config.json`, a `rules.md` skeleton with the nine headings and one-line hints, and a short
    paragraph into the project `CLAUDE.md` («Tasks live in GitHub Issues, workflow by the gh-tasks plugin;
-   config in `.claude/gh-tasks/`; a task created from chat gets `status:inbox`»).
+   config in `.claude/gh-tasks/`; a task created from chat gets `status:inbox` and is created through the plugin's
+   `gh.mjs`», Q30).
 5. Permissions: show the block and, after confirmation, merge into the project `.claude/settings.json`:
    allow `Bash(gh issue *)`, `Bash(gh label *)`, `Bash(gh search issues *)`, the plugin scripts (`gh.mjs`
    included); deny

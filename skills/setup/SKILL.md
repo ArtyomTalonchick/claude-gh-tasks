@@ -130,10 +130,14 @@ report.
    ```
 
    In update mode with an existing file: add any missing headings at the end, leave the rest untouched.
-4. **Project `CLAUDE.md`** — append once (skip if a paragraph mentioning `gh-tasks` is already there):
+4. **Project `CLAUDE.md`** — this paragraph, once:
    «Tasks live in GitHub Issues; the workflow is run by the gh-tasks plugin (`/gh-tasks:triage`,
    `/gh-tasks:plan-version`, `/gh-tasks:next-task`). Config and project rules: `.claude/gh-tasks/`. A task
-   created from chat gets the `status:inbox` label.» Write it in the language the file already uses.
+   created from chat gets the `status:inbox` label and is created through the `scripts/gh.mjs` of the installed
+   gh-tasks plugin (under `~/.claude/plugins/cache/gh-tasks/`):
+   `node <plugin>/scripts/gh.mjs --project <project root> issue create --label status:inbox …`, so it is written as
+   the project's gh account.» Write it in the language the file already uses. A paragraph mentioning `gh-tasks` that
+   already names `gh.mjs` → leave it; one that does not → replace that paragraph, never append a second one.
 5. Validate: `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"`. An error is
    fixed now, not reported as done.
 

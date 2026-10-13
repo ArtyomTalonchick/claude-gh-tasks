@@ -40,6 +40,7 @@ time: it only adds or updates.
 ## The cycle
 
 1. **Create issues** — on GitHub by hand, or ask Claude in chat; an issue created from chat gets `status:inbox`.
+   Claude creates it through the plugin's `scripts/gh.mjs`, so it is written as the project's gh account.
    An open issue with `status:inbox`, or without a type, priority or size label, is untriaged.
 2. **`/gh-tasks:triage [auto] [#N]`** — rewrites each untriaged issue by the body template (What, Where, Done
    when, Notes; the original text is kept in a collapsed block), sets type, priority and size, and proposes to

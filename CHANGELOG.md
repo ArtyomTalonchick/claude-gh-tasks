@@ -12,6 +12,8 @@
 - README states the minimum GitHub CLI version, 2.70.
 - CI runs the tests, lint and strict plugin validation on every push to `main` and pull request.
 - `gh.mjs` refuses `gh label delete`: labels are deleted only by `labels.mjs apply --delete`.
+- An issue created from chat goes through `gh.mjs` and is written as the project's gh account: the `CLAUDE.md`
+  paragraph of `setup` says so, and `setup` replaces an older paragraph instead of adding a second one.
 
 ## 0.1.2 — 2026-10-13
 
