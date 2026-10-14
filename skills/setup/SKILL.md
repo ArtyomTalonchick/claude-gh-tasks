@@ -120,8 +120,8 @@ Also check that `enabledPlugins` in the same file contains `"gh-tasks@gh-tasks":
 in another scope, offer to add it so the project carries the plugin for everyone who clones it.
 
 **Rule commands.** The steps under the headings of `rules.md` (the existing file plus the steps of a project commit
-skill being absorbed) may run shell commands — `npm version patch`, `git tag v1.2.3` — and every such call asks for
-permission. List one rule per command and subcommand, `Bash(npm version *)`, `Bash(git tag *)` (and the
+skill being absorbed) may run shell commands — `npm version patch`, `git tag v1.2.3`, the release steps under
+`## Close version` — and every such call asks for permission. List one rule per command and subcommand, `Bash(npm version *)`, `Bash(git tag *)` (and the
 `PowerShell(...)` twins on Windows), each with the heading it comes from. Leave out a command already allowed, one
 the deny list above matches, and one that reaches the git remote (`git push`, `fetch`, `pull`). The user confirms
 the list or drops items; the rest is merged into `allow` by the same rules as the block above. No commands → say
@@ -188,6 +188,9 @@ and conflicts go to the report.
 
    ## Plan version
    <!-- plan-version, while choosing scope: release size, themes, groups -->
+
+   ## Close version
+   <!-- close-version, before the release commit: version bump, changelog, steps after the commit -->
    ```
 
    In update mode with an existing file: add any missing headings at the end, leave the rest untouched.

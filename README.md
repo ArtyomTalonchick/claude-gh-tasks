@@ -1,9 +1,11 @@
 # gh-tasks
 
 A Claude Code plugin that runs a project's task tracker in GitHub Issues:
-triage incoming issues → plan a release as a milestone → take the next task through to a commit → close it.
+triage incoming issues → plan a release as a milestone → take the next task through to a commit → close it →
+close the release.
 
-Skills: `/gh-tasks:setup`, `/gh-tasks:triage`, `/gh-tasks:plan-version`, `/gh-tasks:next-task`, `/gh-tasks:commit`.
+Skills: `/gh-tasks:setup`, `/gh-tasks:triage`, `/gh-tasks:plan-version`, `/gh-tasks:next-task`, `/gh-tasks:commit`,
+`/gh-tasks:close-version`.
 
 Released versions and their changes: [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -61,9 +63,13 @@ time: it only adds or updates.
    - Checks still failing after 3 fix attempts → it stops and leaves the change uncommitted.
 5. **`/gh-tasks:commit [#N]`** — commits the current change in the project's format, staging the task's files by
    explicit paths, only after you approve this exact commit. `next-task` commits only through it.
+6. **`/gh-tasks:close-version`** — milestones only, run by you. Closes the open milestone: an issue still in
+   progress stops it; each other open issue is removed from the milestone or closed, as you say. It runs the
+   release steps of `rules.md → ## Close version` (version bump, changelog), shows the version, the closed issues,
+   the diff and the commit message, and after your «ok» commits, runs the steps that need the commit (a tag) and
+   closes the milestone. A project whose CI closes milestones does not need it.
 
-No skill pushes, pulls or fetches: the remote is yours. No skill closes a milestone either — close it when you
-release.
+No skill pushes, pulls or fetches: the remote is yours.
 
 ## Configuration
 
@@ -87,7 +93,7 @@ different projects do not get in each other's way. No file or no `account` → t
 
 `.claude/gh-tasks/rules.md` holds what a field cannot express: prose rules under fixed headings (`## Pick`,
 `## Plan`, `## Implement`, `## Verify`, `## Commit`, `## After commit`, `## Close`, `## Triage`,
-`## Plan version`), each read by a skill at a fixed moment, in any language. An empty heading is skipped. The
+`## Plan version`, `## Close version`), each read by a skill at a fixed moment, in any language. An empty heading is skipped. The
 contract and an example for each heading: [`docs/extension-points.md`](docs/extension-points.md).
 
 ## Permissions

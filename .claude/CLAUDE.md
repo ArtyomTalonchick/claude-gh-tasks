@@ -11,7 +11,7 @@ the document does not cover: ask the user, then write the answer into the docume
 ## Layout
 
 - `.claude-plugin/` — `plugin.json` (name, version) and `marketplace.json`.
-- `skills/<name>/SKILL.md` — `setup`, `triage`, `plan-version`, `next-task`, `commit`.
+- `skills/<name>/SKILL.md` — `setup`, `triage`, `plan-version`, `next-task`, `commit`, `close-version`.
 - `scripts/` — `config.mjs`, `labels.mjs`, `milestone.mjs` + `milestoneCore.mjs`, `gh.mjs`, `cli.mjs`; tests in `scripts/test/`.
 - `docs/` — `requirements.md`, `extension-points.md`.
 - `.claude/gh-tasks/` — this repository's own tracker config (dogfooding).

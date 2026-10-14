@@ -25,6 +25,7 @@ adds missing headings.
 | `## Close` | next-task | after closing the issue |
 | `## Triage` | triage | while rewriting an issue body |
 | `## Plan version` | plan-version | while choosing the scope of a release |
+| `## Close version` | close-version | before the release commit |
 
 ## Headings
 
@@ -121,6 +122,19 @@ How big a release is and how it is shaped: size reference, themes, special group
 
 > A release is about a week of work: two or three `size:m` tasks plus small ones. Tasks that wait for the owner's
 > content go to «Waits for the user».
+
+### Close version
+
+`<!-- close-version, before the release commit: version bump, changelog, steps after the commit -->`
+
+What a release changes in the repository and what follows the release commit. Steps that change files run before
+the gate and go into one release commit; steps that need the commit, such as a tag, run after it. No steps that
+change files → the milestone is closed without a commit. A project whose CI closes milestones does not run
+`close-version` and leaves this heading empty.
+
+> `CHANGELOG.md`: add `## X.Y.Z — YYYY-MM-DD` right under «Unreleased», which stays empty. Run
+> `npm version X.Y.Z --no-git-tag-version`. Commit message: `chore: release X.Y.Z`. After the commit:
+> `git tag vX.Y.Z`.
 
 ## Writing good rules
 

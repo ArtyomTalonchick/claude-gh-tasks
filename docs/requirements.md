@@ -194,8 +194,8 @@ before the pick. A type word limits the pick to that `type:*`.
 
 ### `commit`
 Approval gate first: never commit without the user's explicit approval of this specific commit, given after
-seeing the final changes; «ok» to a plan is not approval. Under `next-task` the «ok» on the shown final diff
-is that approval; under `next-task auto` there is no gate (Q40). Format from `config.commit.format` (default
+seeing the final changes; «ok» to a plan is not approval. Under `next-task` and `close-version` the «ok» on the
+shown final diff is that approval; under `next-task auto` there is no gate (Q40). Format from `config.commit.format` (default
 `type(scope): subject`), one line, `trailers: false` → exactly one `-m`, no trailers, no AI mentions even if
 the system asks. Stage only the task's files by explicit paths. ` (#N)` only when the commit resolves the
 issue.

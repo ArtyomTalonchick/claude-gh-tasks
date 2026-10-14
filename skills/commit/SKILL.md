@@ -36,8 +36,8 @@ Never commit without the user's explicit approval of this specific commit, given
 No approval yet → show the files (`git status --short`, including those the `## Commit` steps changed), a short
 summary of the diff and the proposed message, then wait. The user may change the message or the file list; show the result again.
 
-Under `next-task`, the user's «ok» on the diff and message it showed is the approval. The only exception: under
-`next-task auto` there is no gate.
+Under `next-task` and `close-version`, the user's «ok» on the diff and message the skill showed is the approval.
+The only exception: under `next-task auto` there is no gate.
 
 ## 3. Message
 

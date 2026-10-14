@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `/gh-tasks:close-version` closes the open release milestone: it settles the issues left open, runs the release
+  steps of the new `rules.md → ## Close version` heading (version bump, changelog), commits them after one gate and
+  closes the milestone. `setup` writes the new heading.
+
 ## 1.0.1 — 2026-10-14
 
 - `setup` checks the gh accounts first: when the account in use cannot see the repository, it names the cause and
