@@ -108,9 +108,11 @@ Follow `## Plan`.
    rerun all checks. Still failing after 3 attempts → stop: show the failure, leave the change uncommitted and the
    issue `status:in-progress`, report «#N left open — checks fail», end `loop`.
 3. Follow `## Verify`.
-4. **Show** the files (`git status --short`), a short summary of the diff, the result of each check and the
+4. Run the steps of `rules.md → ## Commit` that change files, as the `gh-tasks:commit` skill describes, so the
+   diff below includes their files.
+5. **Show** the files (`git status --short`), a short summary of the diff, the result of each check and the
    proposed commit message.
-5. **Diff gate** (see Gates) → wait:
+6. **Diff gate** (see Gates) → wait:
    - «ok» → step 5, then `loop` goes on;
    - «ok, stop» → step 5, then `loop` ends;
    - anything else → feedback on the change: apply it, back to 2.

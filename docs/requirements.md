@@ -74,6 +74,7 @@ file keeps the decisions and their reasons.
 | Q40 | `next-task` gates | Three levels. Default: the plan is shown only when there are questions, the final diff always waits for «ok». `plan`: the plan always waits for «ok». `auto`: no gates, commits without approval. `plan auto`: plan gate, then no diff gate. `auto` refuses to run without `checks`, stops on a dirty tree or a stuck `status:in-progress`, skips tasks with open questions and `type:ops` tasks, writes new questions into the issue instead of asking, commits only with green checks, and ends with a report of every commit and every closed or skipped issue. A project that always wants the plan gate says so under `## Plan` |
 | Q41 | Failing checks and stopping `loop` | Checks still failing after 3 fix attempts → stop and show the failure, the task stays `status:in-progress`, `loop` ends: the uncommitted change blocks the next task. «ok, stop» on the shown diff commits, closes and ends `loop`; `loop` also ends when no task is left |
 | Q42 | gh account | Per project, per user: `account` (a GitHub login) in the git-ignored `.claude/gh-tasks/config.local.json`, asked by `setup` when gh has more than one login. Not in `config.json`: collaborators use different accounts. Every GitHub call of the plugin goes through `scripts/gh.mjs`, which runs `gh` with `GH_TOKEN` read from the gh keyring (`gh auth token --user <login>`) for its own process only. `gh auth switch` is not used: the active account is global and would race between parallel sessions; stopping on a wrong active account is rejected for the same reason. `gh.mjs` allows only `gh issue` (not `delete` / `transfer`), `gh label` (not `delete`: only `labels.mjs apply --delete` deletes labels) and `gh search issues`, because a permission rule matches only the `node …` command line. Every `gh.mjs` call runs against `config.repo`: `--repo` is added unless the call carries `--repo` / `-R`. No `account` → the active account |
+| Q43 | `## Commit` steps and the gate | The `## Commit` steps that change files (a version bump) run before the commit gate, and under `next-task` before the diff is shown, so the user approves the file list that is committed; a step already done in the working tree is not repeated. Steps that need the commit (a tag) run after it |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
 
@@ -178,7 +179,7 @@ before the pick. A type word limits the pick to that `type:*`.
    close, `loop` goes on; «ok, stop» → commit, close, `loop` ends; anything else is feedback on the change.
    `auto`: no wait, the show goes into the report. Extension points: **Implement**, **Verify**.
 4. Commit through `gh-tasks:commit`; subject ends with ` (#N)`, never `closes/fixes/resolves`.
-   Extension points: **Commit**, **After commit**.
+   Extension points: **Commit** (its file-changing steps run before the diff is shown, Q43), **After commit**.
 5. Close: after the last commit remove `status:in-progress`, `gh issue close N --reason completed`, no
    comment. Items only a deploy can verify go to an «After release» section and do not block closing.
    Not closing → say «#N left open — reason». Report; `loop` → back to step 1 in the same turn; under `auto`

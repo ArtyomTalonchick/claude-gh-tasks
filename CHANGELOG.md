@@ -6,6 +6,8 @@
   proposes a logged-in account that can, instead of failing with «Could not resolve to a Repository».
 - Absorbing a project `commit` skill in `setup` keeps its non-format steps: they move to `rules.md → ## Commit`,
   and each step is shown with where it goes before the skill is deleted.
+- `rules.md → ## Commit` steps that change files run before the commit gate (under `next-task`, before the diff is
+  shown), so the approved file list is the committed one.
 
 ## 1.0.0 — 2026-10-14
 

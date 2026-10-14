@@ -70,7 +70,9 @@ local URLs.
 
 `<!-- commit, before committing: anything beyond config.commit -->`
 
-Commit rules that `config.commit` cannot hold. The format, types and trailers belong in the config.
+Commit rules that `config.commit` cannot hold. The format, types and trailers belong in the config. Steps that
+change files run before the commit gate — under `next-task`, before the diff is shown — so the approved file list
+is the committed one; steps that need the commit itself, such as a tag, run after it.
 
 > Never commit generated files under `dist/`.
 
