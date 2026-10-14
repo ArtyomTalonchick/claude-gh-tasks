@@ -35,6 +35,16 @@ adds missing headings.
 Which tasks a session may take and how it claims them: locks between parallel sessions, tasks to skip, limits on
 size.
 
+Two core steps of `next-task` follow it when it says so:
+
+- Which `status:in-progress` issues are this session's. The others belong to parallel sessions: they are left out
+  of the unfinished-work check, so the session neither offers them nor stops on them. Without the rule every
+  in-progress issue counts as this session's.
+- How a task is claimed, e.g. a lock before the `status:in-progress` label. A failed lock means another session
+  has the task: the next candidate is claimed instead. Without the rule the label is set at once.
+
+> Parallel slots: an in-progress issue is this session's only when the current branch is `task/N`. Claim a task by
+> `git branch task/N main` first, then `git switch task/N`, and set the label only when the branch was created.
 > Take a `size:l` task only when it is asked for by number. Skip a task whose files overlap with a task another
 > session has in progress.
 

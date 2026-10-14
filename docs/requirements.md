@@ -77,6 +77,7 @@ file keeps the decisions and their reasons.
 | Q43 | `## Commit` steps and the gate | The `## Commit` steps that change files (a version bump) run before the commit gate, and under `next-task` before the diff is shown, so the user approves the file list that is committed; a step already done in the working tree is not repeated. Steps that need the commit (a tag) run after it |
 | Q44 | `setup` step order | Permissions are merged before the labels are applied: `labels.mjs apply` is the first write to GitHub, and under `auto` a call without a permission rule is blocked |
 | Q45 | Permissions for `rules.md` commands | `setup` step 3 lists the shell commands the `rules.md` steps run (an absorbed commit skill's steps included) and proposes one allow rule per command and subcommand (`Bash(npm version *)`, `Bash(git tag *)`), skipping commands already allowed, denied, or reaching the git remote; merged after the user's confirmation by the same rules as the gh-tasks block. `setup auto` only lists them: they are project commands the plugin did not write. The `commit` skill's `allowed-tools` are not widened — the plugin cannot know a project's commands |
+| Q46 | Parallel `next-task` sessions | `## Pick` may change two core steps of `next-task`: which `status:in-progress` issues are this session's (the others belong to parallel sessions and are left out of the unfinished-work check, so `auto` does not stop on them), and how a task is claimed (a lock before the label; a failed lock skips to the next candidate, or stops when the task was given by `#N`). Without such a rule every in-progress issue is this session's and the label is set at once |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
 
@@ -162,15 +163,16 @@ description from the template, create/describe the milestone, assign issues, ver
 Gates (Q40): default — plan gate only when there are questions, diff gate always; `plan` — plan gate always;
 `auto` — no gates; `plan auto` — plan gate, then no diff gate. `auto` needs `checks`: none configured → stop
 before the pick. A type word limits the pick to that `type:*`.
-1. Pick: stuck `status:in-progress` or dirty tree → ask continue/new (`auto`: stop and say so). `#N` → take it
-   (triage first if untriaged; `triage auto` under `auto`). With milestones: follow the open milestone
-   description top-down, first open free task; tasks in the milestone but not in the description come after;
-   outside the milestone only when it is exhausted; no open milestone → say so, offer `/gh-tasks:plan-version`,
-   or order by labels on the user's word (`auto`: order by labels and say so). Without milestones:
-   `prio:critical → major → normal → minor`, then `type:bug → feature → ops → wish`, older first. Without
-   `auto` tasks with open questions last; `auto` skips them and `type:ops`. Never `prio:backlog` unless taken
-   by `#N`. Mark `status:in-progress`; no milestone → put into the open one and say the scope grew. Show what
-   was taken, why, and the next two. Extension point: **Pick**.
+1. Pick: stuck `status:in-progress` of this session (Q46) or dirty tree → ask continue/new (`auto`: stop and
+   say so). `#N` → take it (triage first if untriaged; `triage auto` under `auto`). With milestones: follow the
+   open milestone description top-down, first open free task; tasks in the milestone but not in the description
+   come after; outside the milestone only when it is exhausted; no open milestone → say so, offer
+   `/gh-tasks:plan-version`, or order by labels on the user's word (`auto`: order by labels and say so). Without
+   milestones: `prio:critical → major → normal → minor`, then `type:bug → feature → ops → wish`, older first.
+   Without `auto` tasks with open questions last; `auto` skips them and `type:ops`. Never `prio:backlog` unless
+   taken by `#N`. Mark `status:in-progress` (after a lock when `## Pick` asks for one, Q46); no milestone → put
+   into the open one and say the scope grew. Show what was taken, why, and the next two. Extension point:
+   **Pick**.
 2. Plan: read issue + comments, read code. Questions → ask in chat and wait (the label stays); `auto` →
    write them into the body under the open-questions marker, remove `status:in-progress`, go to step 1.
    `type:ops` → checklist into the body instead of code. `plan` → propose the plan, wait; otherwise plan
@@ -325,7 +327,7 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
 | `type (scope): subject`, types list, one `-m`, no Claude | `commit` |
 | «Who is affected: customers / staff» | `issueTemplate.extraLines` + `## Triage` |
 | Telegram: `tg-issue` marker, `💬` comments, bot writes only «✅ #N» | foreign markers preserved by core; semantics in `## Triage` |
-| Slots: lock branch, skip neighbours, rebase + ff-merge, `slot.mjs info/sync` | `## Pick`, `## After commit` (later: a slots plugin) |
+| Slots: lock branch, skip neighbours, rebase + ff-merge, `slot.mjs info/sync` | `## Pick` (this session's in-progress issue: the current branch `task/N`; claim: `git branch task/N main` before the label — Q46), `## After commit` (later: a slots plugin) |
 | `.claude/local/tasks.md` | `## Plan`, `## Close` |
 | `curl localhost:3000`, playwright, `rules-reviewer`, slot port | `## Verify` |
 | `db/schema.sql`, `db-once/` | `## Implement` |
@@ -334,7 +336,8 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
 | `/release`, CI closing the milestone, Telegram release posts | out of scope, stays in the project |
 | Russian texts | `language: "ru"` |
 
-Everything maps; no core change is needed for the migration.
+Everything maps; the only core change the migration needs is Q46: `## Pick` decides which in-progress issues
+are this session's and how a task is claimed.
 
 ## 12. Roadmap (milestones of this repository)
 

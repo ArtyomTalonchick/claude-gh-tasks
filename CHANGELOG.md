@@ -14,6 +14,9 @@
   to GitHub.
 - `setup` offers allow rules for the commands the `rules.md` steps run (a version bump, a tag), so they stop asking
   for permission on every commit; `setup auto` only lists them.
+- Parallel `next-task` sessions: `rules.md → ## Pick` can say which in-progress issues are this session's and how a
+  task is claimed (a lock before the label), so `next-task auto loop` in parallel slots no longer stops on a
+  neighbour's task.
 
 ## 1.0.0 — 2026-10-14
 

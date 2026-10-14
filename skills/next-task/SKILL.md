@@ -57,8 +57,9 @@ Follow `## Pick`.
 
 1. **Unfinished work.**
    `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue list --state open --label status:in-progress --json number,title`
-   and `git status --short`. Either is non-empty → show it and ask: continue that task (go to step 3 with it) or
-   start a new one. `auto` → say what was found and stop.
+   and `git status --short`. `## Pick` may say which in-progress issues are this session's (e.g. the issue of the
+   current branch `task/N`): the others belong to parallel sessions and are left out. Either is non-empty → show it
+   and ask: continue that task (go to step 3 with it) or start a new one. `auto` → say what was found and stop.
 2. **`#N` given** → that issue. Closed → say so, stop. Untriaged (`status:inbox`, or missing a `type:*`, `prio:*`
    or `size:*` label) → run the `gh-tasks:triage` skill with `#N` (`auto #N` under `auto`) first; it was closed as a
    duplicate or «not doing» → stop.
@@ -75,7 +76,9 @@ Follow `## Pick`.
    - `auto` skips `type:ops`: its work is done by the user (step 3).
 
    Nothing left → «No tasks left», stop.
-4. **Claim.**
+4. **Claim.** `## Pick` may say how a task is claimed, e.g. a lock taken before the label (`git branch task/N main`).
+   The lock fails → another session has the task: skip it and claim the next candidate (`#N` given → say so, stop).
+   Then
    `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --add-label status:in-progress`.
    Milestones on, an open milestone exists and the issue is not in it →
    `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --milestone <it>` and say
