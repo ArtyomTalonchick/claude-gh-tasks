@@ -66,8 +66,10 @@ the current value), so the user can reply «ok» or change single items:
 - **Commit format** — read the last ~30 subjects (`git log -30 --format=%s`). A visible convention → propose it
   with a real example from the log and the types it uses; none → conventional commits `type(scope): subject`.
   Suggest improvements only if they are small and clear. Trailers stay off unless the user asks.
-- **Project commit skill** — only if `.claude/skills/commit/` exists: absorb its format rules into
-  `config.commit` and delete it, or keep it (gh-tasks still commits only through `gh-tasks:commit`).
+- **Project commit skill** — only if `.claude/skills/commit/` exists: absorb it and delete it, or keep it (gh-tasks
+  still commits only through `gh-tasks:commit`). Absorbing splits it: the format goes to `config.commit`, every
+  other step (bump a version, create a tag, files never committed…) goes to `rules.md → ## Commit`. With the
+  question, show each step of the skill and where it goes; nothing of the skill is dropped.
 - **Issue template extra lines** — only if the project obviously needs one (e.g. «who is affected»); else skip.
 - **Account** — the gh account the plugin acts as in this project, for this user only, from the `accounts` output
   of step 1. Ask only when more than one login is listed or one is configured; propose the login step 1 chose
@@ -138,6 +140,8 @@ and conflicts go to the report.
    ```
 
    In update mode with an existing file: add any missing headings at the end, leave the rest untouched.
+   An absorbed commit skill: append its non-format steps under `## Commit`, after what is already there. Delete
+   the skill only after `config.json` and `rules.md` hold what it held.
 4. **Project `CLAUDE.md`** — this paragraph, once:
    «Tasks live in GitHub Issues; the workflow is run by the gh-tasks plugin (`/gh-tasks:triage`,
    `/gh-tasks:plan-version`, `/gh-tasks:next-task`). Config and project rules: `.claude/gh-tasks/`. A task
