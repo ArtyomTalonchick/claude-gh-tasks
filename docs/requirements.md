@@ -13,7 +13,7 @@ file keeps the decisions and their reasons.
 
 **In v1**
 
-- Skills: `setup`, `triage`, `plan-version`, `next-task`, `commit`.
+- Skills: `setup`, `triage`, `plan-version`, `next-task`, `commit`, `close-version`.
 - Scripts: `labels.mjs`, `milestone.mjs` (+ `milestoneCore.mjs`), `config.mjs`, `gh.mjs`, `cli.mjs`.
 - Project files: `.claude/gh-tasks/config.json`, `.claude/gh-tasks/rules.md`, the git-ignored
   `.claude/gh-tasks/config.local.json`.
@@ -21,7 +21,8 @@ file keeps the decisions and their reasons.
 
 **Out of v1** (later plugins or later versions)
 
-- `release` (tag, push, GitHub Release, deploy verification) — bound to the prosportcards CI.
+- `release` (push, GitHub Release, deploy verification, release notifications) — bound to the prosportcards CI.
+  Closing the milestone itself is `close-version` (Q47).
 - Worktree slots (`task/N` lock branches, merge into `main`, `SessionStart` sync hook).
 - Telegram: issue intake from a bot, `tg-issue` markers, release notifications.
 - Hooks of any kind.
@@ -50,7 +51,7 @@ file keeps the decisions and their reasons.
 | Q16 | License | Public repository, MIT |
 | Q17 | Project files | `.claude/gh-tasks/config.json` and `.claude/gh-tasks/rules.md`; the schema is shipped in `scripts/config.mjs` and validated at the start of every skill |
 | Q18 | Config fields | Section 6 |
-| Q19 | Extension points | Nine fixed headings in `rules.md` (section 7). A missing heading is an empty point, skipped silently |
+| Q19 | Extension points | Ten fixed headings in `rules.md` (section 7). A missing heading is an empty point, skipped silently |
 | Q20 | Language of artefacts | Everything in GitHub is in the project language; machine-relevant places are marked with language-independent HTML comments `<!-- gh-tasks:… -->`; foreign HTML comments (e.g. `tg-issue`) are preserved untouched |
 | Q21 | Triage | Separate skill `triage`; `plan-version` calls it for untriaged candidates, `next-task #N` for an untriaged task taken by number |
 | Q22 | Flags | `next-task` takes `plan`, `auto` and `loop` (next task after closing) in v1; the gates they set are Q40 |
@@ -78,6 +79,7 @@ file keeps the decisions and their reasons.
 | Q44 | `setup` step order | Permissions are merged before the labels are applied: `labels.mjs apply` is the first write to GitHub, and under `auto` a call without a permission rule is blocked |
 | Q45 | Permissions for `rules.md` commands | `setup` step 3 lists the shell commands the `rules.md` steps run (an absorbed commit skill's steps included) and proposes one allow rule per command and subcommand (`Bash(npm version *)`, `Bash(git tag *)`), skipping commands already allowed, denied, or reaching the git remote; merged after the user's confirmation by the same rules as the gh-tasks block. `setup auto` only lists them: they are project commands the plugin did not write. The `commit` skill's `allowed-tools` are not widened — the plugin cannot know a project's commands |
 | Q46 | Parallel `next-task` sessions | `## Pick` may change two core steps of `next-task`: which `status:in-progress` issues are this session's (the others belong to parallel sessions and are left out of the unfinished-work check, so `auto` does not stop on them), and how a task is claimed (a lock before the label; a failed lock skips to the next candidate, or stops when the task was given by `#N`). Without such a rule every in-progress issue is this session's and the label is set at once |
+| Q47 | Closing a release | Skill `close-version`: a project without release CI has nothing else that closes the milestone, so the cycle would not end. It closes the open milestone and stops before the remote: no push, no GitHub Release, no deploy — those stay in the project or a later `release` plugin. Requires `milestones: true`; no `auto` (closing needs the user, Q39). Open issues left in the milestone are shown and each is removed from the milestone (back to free, `plan-version` takes it next time) or closed, on the user's word. Release file changes (version bump, changelog) come from a new extension point `## Close version` and are committed through `commit`; steps that need the commit (a tag) run after it. A project whose CI closes milestones (prosportcards) does not run it |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
 
@@ -111,6 +113,7 @@ claude-gh-tasks/                    repository and folder; the plugin and the ma
     plan-version/SKILL.md  (+ templates/milestone.md)
     next-task/SKILL.md
     commit/SKILL.md
+    close-version/SKILL.md
   scripts/
     config.mjs        schema, load + validate, defaults; `node scripts/config.mjs check --project <dir>`
     labels.mjs        create/update labels, rename map, list extras; never deletes without --delete
@@ -197,6 +200,15 @@ is that approval; under `next-task auto` there is no gate (Q40). Format from `co
 the system asks. Stage only the task's files by explicit paths. ` (#N)` only when the commit resolves the
 issue.
 
+### `close-version`
+Requires `milestones: true`; no `auto` (Q47). Flow: open milestone (none → say so, stop); dirty tree → stop and
+say so → open issues in the milestone: a `status:in-progress` one → stop, the work is unfinished; the others are
+shown, and each is removed from the milestone or closed on the user's word → `## Close version` steps that change
+files run → **gate**: one message with the version, closed issues, the diff and the commit message → commit
+through `gh-tasks:commit` (no `## Close version` file changes → no commit) → steps that need the commit →
+`milestone.mjs close` → report: the release is ready to leave the machine (push is the user's), next command
+`/gh-tasks:plan-version`. Extension point: **Close version**.
+
 ## 6. Config: `.claude/gh-tasks/config.json`
 
 ```jsonc
@@ -243,6 +255,7 @@ language. A missing heading is an empty point. The full contract goes to `docs/e
 | `## Close` | next-task | after closing | `capture-knowledge`, prune `.claude/local/tasks.md`, release-progress line |
 | `## Triage` | triage | while rewriting a body | keep `tg-issue` marker, `💬` comments are the author, «Who is affected» semantics |
 | `## Plan version` | plan-version | while choosing scope | release size reference, season rule, themes, «waits for the owner» group |
+| `## Close version` | close-version | before the release commit | none: CI closes the milestone |
 
 ## 8. Labels, markers, lifecycle
 
@@ -254,8 +267,8 @@ etc., Q34) is applied only when the target does not exist yet; both existing is 
 
 Lifecycle: `status:inbox` or no labels → triage → free → `next-task` sets `status:in-progress` → commit(s)
 with `(#N)` → closed `completed` right after the last commit. Closed in an open milestone = waiting for a
-release; a closed milestone = released. Nothing in the plugin closes a milestone or touches issues
-automatically (that is a CI concern and stays in the project).
+release; a closed milestone = released. Only `close-version` closes a milestone, on the user's word (Q47);
+nothing in the plugin closes a milestone or touches issues automatically (release CI stays in the project).
 
 Markers (HTML comments, language-independent, preserved on every rewrite):
 - `<!-- gh-tasks:open-questions -->` — the body has open questions for the user; `next-task` takes such tasks
@@ -300,7 +313,7 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
 4. Labels: `gh.mjs label list --limit 1` as the chosen account (a failure stops); `labels.mjs apply --dry-run` → show the plan and ask which foreign labels to delete (all / some /
    none) → `labels.mjs apply [--delete <names>]`: renames where safe, create/update ours, delete only the names
    the user chose (Q33, Q34).
-5. Write `config.json`, a `rules.md` skeleton with the nine headings and one-line hints, and a short
+5. Write `config.json`, a `rules.md` skeleton with the ten headings and one-line hints, and a short
    paragraph into the project `CLAUDE.md` («Tasks live in GitHub Issues, workflow by the gh-tasks plugin;
    config in `.claude/gh-tasks/`; a task created from chat gets `status:inbox` and is created through the plugin's
    `gh.mjs`», Q30).
