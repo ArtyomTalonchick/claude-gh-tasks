@@ -103,6 +103,9 @@ Milestones go through `scripts/milestone.mjs` instead, which only reaches `repos
 only `gh issue` (except `delete` and `transfer`), `gh label` (except `delete`: labels are deleted only by
 `labels.mjs apply --delete`) and `gh search issues`.
 
+Commands your `rules.md` steps run (`npm version`, `git tag`, …) would ask for permission on every call. `setup`
+lists an allow rule for each one and adds the ones you confirm; `setup auto` only lists them.
+
 ## Development
 
 `claude plugin marketplace add ./claude-gh-tasks` from the parent folder loads the plugin in place;

@@ -119,7 +119,16 @@ of `gh api` in one line: its token can do anything and a rule cannot narrow it; 
 Also check that `enabledPlugins` in the same file contains `"gh-tasks@gh-tasks": true`; if the plugin was installed
 in another scope, offer to add it so the project carries the plugin for everyone who clones it.
 
-`auto`: merge the block and add `enabledPlugins` without asking.
+**Rule commands.** The steps under the headings of `rules.md` (the existing file plus the steps of a project commit
+skill being absorbed) may run shell commands — `npm version patch`, `git tag v1.2.3` — and every such call asks for
+permission. List one rule per command and subcommand, `Bash(npm version *)`, `Bash(git tag *)` (and the
+`PowerShell(...)` twins on Windows), each with the heading it comes from. Leave out a command already allowed, one
+the deny list above matches, and one that reaches the git remote (`git push`, `fetch`, `pull`). The user confirms
+the list or drops items; the rest is merged into `allow` by the same rules as the block above. No commands → say
+nothing.
+
+`auto`: merge the block and add `enabledPlugins` without asking; the rule commands are not merged, only listed in
+the report.
 
 ## 4. Labels
 
@@ -206,8 +215,8 @@ no `vX.Y.Z` milestone exists yet — ask the user for the first version. After t
 `node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" create --project "${CLAUDE_PROJECT_DIR}" --title <vX.Y.Z>`.
 This step is optional; skip it on «no».
 
-`auto`: the report also lists every value taken in step 2 and the foreign labels and conflicts left in place, so
-the user can correct them with another `/gh-tasks:setup`. The first milestone is created without asking, titled
+`auto`: the report also lists every value taken in step 2, the foreign labels and conflicts left in place and the
+rule-command permissions not merged, so the user can correct them with another `/gh-tasks:setup`. The first milestone is created without asking, titled
 by `next-version`; exit code 2 still asks the user for the first version.
 
 End with the next command: `/gh-tasks:triage` when there are untriaged issues, otherwise `/gh-tasks:plan-version`

@@ -12,6 +12,8 @@
   dependencies) shows up before the first task; heavy checks are flagged with cheaper variants.
 - `setup` merges the permissions before it applies the labels, so `setup auto` is not blocked on its first write
   to GitHub.
+- `setup` offers allow rules for the commands the `rules.md` steps run (a version bump, a tag), so they stop asking
+  for permission on every commit; `setup auto` only lists them.
 
 ## 1.0.0 — 2026-10-14
 
