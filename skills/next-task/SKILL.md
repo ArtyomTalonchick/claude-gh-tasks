@@ -38,6 +38,9 @@ written exactly as below, never plain `gh`: the wrapper runs as the project's gh
 A gate means: show, then wait for the user's «ok»; write nothing the gate covers before it. `## Plan` in `rules.md`
 may ask for the plan gate in more cases.
 
+Under `auto`, the open questions of an issue given as `#N` are still asked in chat and waited for (step 3); the
+gates stay off.
+
 `auto` never deletes, never closes an issue other than the one it has just committed, never invents what only the
 user knows and never touches the remote.
 
@@ -93,10 +96,10 @@ Follow `## Plan`.
    comments are part of the request. Read the code the issue points to; for a search wider than a few files, use an
    Explore agent and keep only its conclusion.
 2. **Questions** — open questions in the body, or anything only the user can decide:
-   - without `auto` → ask them in chat, one line each, and wait; the label stays. Answers that change the scope go
-     into the body (rewrite as in step 7 of `${CLAUDE_PLUGIN_ROOT}/skills/triage/SKILL.md`, the open-questions list
-     shortened to what is still open);
-   - `auto` → write them into the body under `<!-- gh-tasks:open-questions -->`, then
+   - without `auto`, or an issue given as `#N` → ask them in chat, one line each, and wait; the label stays. Answers
+     that change the scope go into the body (rewrite as in step 7 of `${CLAUDE_PLUGIN_ROOT}/skills/triage/SKILL.md`,
+     the open-questions list shortened to what is still open). Under `auto` the rest of the run keeps its gates;
+   - `auto`, an issue not given by number → write them into the body under `<!-- gh-tasks:open-questions -->`, then
      `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --remove-label status:in-progress`,
      note the issue as skipped and go back to step 2.
 3. **`type:ops`** — the work is not code: write a checklist of the steps into the body under **Done when**, show it,

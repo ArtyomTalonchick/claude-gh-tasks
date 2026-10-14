@@ -5,6 +5,8 @@
 - `/gh-tasks:close-version` closes the open release milestone: it settles the issues left open, runs the release
   steps of the new `rules.md → ## Close version` heading (version bump, changelog), commits them after one gate and
   closes the milestone. `setup` writes the new heading.
+- `next-task #N auto` takes the issue even when it has open questions: they are asked in chat, and the rest of the
+  run stays without gates.
 
 ## 1.0.1 — 2026-10-14
 

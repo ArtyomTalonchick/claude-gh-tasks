@@ -58,7 +58,8 @@ time: it only adds or updates.
    - `plan` — also waits for «ok» on the plan (by default the plan is shown only when there are questions).
    - `auto` — no gates: commits once the checks pass. It needs `checks` in the config, stops on a dirty tree or a
      task left `status:in-progress`, skips `type:ops` tasks and tasks with open questions, and writes new
-     questions into the issue instead of asking. `plan auto` keeps the plan gate only.
+     questions into the issue instead of asking. An issue given as `#N` is taken anyway: its questions are asked
+     in chat. `plan auto` keeps the plan gate only.
    - `loop` — goes on to the next task after each commit, until no task is left or you answer «ok, stop».
    - Checks still failing after 3 fix attempts → it stops and leaves the change uncommitted.
 5. **`/gh-tasks:commit [#N]`** — commits the current change in the project's format, staging the task's files by
