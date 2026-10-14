@@ -277,7 +277,8 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
    active) cannot see the repo → another login that can is the proposed account, none can → stop with its own
    message; existing `.claude/gh-tasks/config.json` → update mode.
 2. Questions, one block: milestones yes/no; version scheme (`patch` or a command); language; checks
-   (proposed from `package.json` scripts); commit format (proposed from the last ~30 `git log` subjects:
+   (proposed from `package.json` scripts, each run once with its time and result shown; a heavy one is flagged
+   with a cheaper variant such as `tsc --noEmit` or `vitest run --changed`); commit format (proposed from the last ~30 `git log` subjects:
    detected convention, or conventional commits if none, with suggested improvements); existing project
    `commit` skill → absorb and delete, or keep (Q31); gh account when `gh.mjs accounts` lists more than one login
    (Q42) — written to `config.local.json` before the labels, and the file is added to `.gitignore`.

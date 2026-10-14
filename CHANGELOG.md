@@ -8,6 +8,8 @@
   and each step is shown with where it goes before the skill is deleted.
 - `rules.md → ## Commit` steps that change files run before the commit gate (under `next-task`, before the diff is
   shown), so the approved file list is the committed one.
+- `setup` runs each proposed check once and shows its time and result, so a broken check (e.g. missing
+  dependencies) shows up before the first task; heavy checks are flagged with cheaper variants.
 
 ## 1.0.0 — 2026-10-14
 

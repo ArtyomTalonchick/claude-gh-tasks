@@ -62,7 +62,11 @@ the current value), so the user can reply «ok» or change single items:
   Milestone titles are always `vX.Y.Z`.
 - **Language** of issues, milestones and comments — propose the language of recent issues and commits.
 - **Checks** — commands run before showing a change; propose them from `package.json` scripts (lint, type check,
-  test). None found → propose an empty list; never invent commands.
+  test). None found → propose an empty list; never invent commands. Run each proposed check once in the project
+  root and show its time and result with the question: a failure (missing dependencies, a broken script) is
+  named before anything is written. A heavy check — a full build, a full test run that takes long — is flagged
+  with a cheaper variant the project's tools offer: `tsc --noEmit` or `tsc -b` instead of a build,
+  `vitest run --changed`, `jest --onlyChanged`.
 - **Commit format** — read the last ~30 subjects (`git log -30 --format=%s`). A visible convention → propose it
   with a real example from the log and the types it uses; none → conventional commits `type(scope): subject`.
   Suggest improvements only if they are small and clear. Trailers stay off unless the user asks.
@@ -76,8 +80,9 @@ the current value), so the user can reply «ok» or change single items:
   when the account in use cannot see the repository, else the configured login, else the active one. «none» → the
   active account is used.
 
-`auto`: send no questions; take each proposed answer (in update mode the current value). A project commit skill
-is kept; issue template extra lines are skipped.
+`auto`: send no questions; take each proposed answer (in update mode the current value); the checks still run
+once, and their times, failures and cheaper variants go to the report. A project commit skill is kept; issue
+template extra lines are skipped.
 
 ## 3. Labels
 
