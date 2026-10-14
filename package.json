@@ -1,6 +1,6 @@
 {
   "name": "gh-tasks",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Claude Code plugin: a task tracker workflow on GitHub Issues",

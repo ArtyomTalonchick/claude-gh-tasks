@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.0.1 — 2026-10-14
+
 - `setup` checks the gh accounts first: when the account in use cannot see the repository, it names the cause and
   proposes a logged-in account that can, instead of failing with «Could not resolve to a Repository».
 - Absorbing a project `commit` skill in `setup` keeps its non-format steps: they move to `rules.md → ## Commit`,
