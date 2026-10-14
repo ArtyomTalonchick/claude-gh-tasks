@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getLocalConfigPath } from "../config.mjs";
-import { checkGhArgs, ghEnv, parseAccounts, splitArgs, withRepo } from "../gh.mjs";
+import { checkGhArgs, formatAccount, ghEnv, parseAccounts, splitArgs, withRepo } from "../gh.mjs";
 
 describe("checkGhArgs", () => {
     [
@@ -118,6 +118,24 @@ describe("parseAccounts", () => {
 
     test("4. not JSON → throws", () => {
         assert.throws(() => parseAccounts("unknown flag: --json"));
+    });
+});
+
+describe("formatAccount", () => {
+    const repo = "owner/name";
+
+    test("1. active login that can see the repo", () => {
+        assert.equal(formatAccount({ login: "first", active: true, canSee: true }, repo),
+            "first (active): can see owner/name");
+    });
+
+    test("2. login that cannot see the repo", () => {
+        assert.equal(formatAccount({ login: "second", active: false, canSee: false }, repo),
+            "second: cannot see owner/name");
+    });
+
+    test("3. no repo → the login alone", () => {
+        assert.equal(formatAccount({ login: "first", active: true, canSee: undefined }, null), "first (active)");
     });
 });
 

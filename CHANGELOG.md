@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `setup` checks the gh accounts first: when the account in use cannot see the repository, it names the cause and
+  proposes a logged-in account that can, instead of failing with «Could not resolve to a Repository».
+
 ## 1.0.0 — 2026-10-14
 
 - README: requirements, install, the cycle of skills with their flags, the config fields, `rules.md` and the

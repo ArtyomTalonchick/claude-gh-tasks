@@ -26,8 +26,8 @@ repository gets it. `/gh-tasks:setup` asks its questions in one message, each wi
 or change single items. It then:
 
 - writes `.claude/gh-tasks/config.json` and creates `.claude/gh-tasks/rules.md` with empty headings;
-- with several gh accounts logged in, asks which one this project uses and writes it to the git-ignored
-  `.claude/gh-tasks/config.local.json`;
+- with several gh accounts logged in, asks which one this project uses — proposing one that can see the
+  repository when the active one cannot — and writes it to the git-ignored `.claude/gh-tasks/config.local.json`;
 - creates the labels `status:*`, `type:*`, `prio:*`, `size:*` and lists the labels it does not own; it deletes
   only the ones you name;
 - adds a short gh-tasks note to the project `CLAUDE.md`;

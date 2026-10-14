@@ -12,7 +12,6 @@ allowed-tools: >-
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" *)
   Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
-  Bash(gh label list *) PowerShell(gh label list *)
   Bash(git log *) PowerShell(git log *)
   Bash(git remote get-url *) PowerShell(git remote get-url *)
 ---
@@ -33,10 +32,17 @@ chosen in step 2.
 
 ## 1. Preconditions
 
-1. `gh label list --limit 1` (not `gh auth status`: the permissions of step 5 deny `gh auth *`). No `gh` →
-   «GitHub CLI is not installed: https://cli.github.com», stop. Not logged in → «Run `gh auth login` first», stop.
-2. `git remote get-url origin` must point to GitHub. No remote → «Add a GitHub remote (`origin`) or set `repo` in
+1. `git remote get-url origin` must point to GitHub. No remote → «Add a GitHub remote (`origin`) or set `repo` in
    `.claude/gh-tasks/config.json`», stop.
+2. `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" accounts --project "${CLAUDE_PROJECT_DIR}"` — it lists the
+   logged-in logins, marks the active one, says whether each can see the repository and prints the configured
+   login. `gh not found` → «GitHub CLI is not installed: https://cli.github.com», stop. No account → «Run
+   `gh auth login` first», stop. The account in use is the configured login, else the active one. It cannot see the
+   repository:
+   - another listed login can → that login is the proposed answer to the Account question of step 2; say that the
+     account in use cannot see the repository;
+   - no login can → «No logged-in gh account can see <repo>: check the remote (or `repo` in the config), or run
+     `gh auth login` with an account that has access», stop.
 3. `.claude/gh-tasks/config.json` exists → **update mode**: run
    `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"` and use its output as the
    current values. An invalid config is not a stop here: show the errors and fix them through the questions,
@@ -63,25 +69,27 @@ the current value), so the user can reply «ok» or change single items:
 - **Project commit skill** — only if `.claude/skills/commit/` exists: absorb its format rules into
   `config.commit` and delete it, or keep it (gh-tasks still commits only through `gh-tasks:commit`).
 - **Issue template extra lines** — only if the project obviously needs one (e.g. «who is affected»); else skip.
-- **Account** — the gh account the plugin acts as in this project, for this user only. Run
-  `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" accounts --project "${CLAUDE_PROJECT_DIR}"`: it lists the logged-in
-  logins, marks the active one and prints the configured one. Ask only when more than one login is listed or one
-  is configured; propose the configured login, else the active one. «none» → the active account is used.
+- **Account** — the gh account the plugin acts as in this project, for this user only, from the `accounts` output
+  of step 1. Ask only when more than one login is listed or one is configured; propose the login step 1 chose
+  when the account in use cannot see the repository, else the configured login, else the active one. «none» → the
+  active account is used.
 
 `auto`: send no questions; take each proposed answer (in update mode the current value). A project commit skill
 is kept; issue template extra lines are skipped.
 
 ## 3. Labels
 
-1. `node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" apply --project "${CLAUDE_PROJECT_DIR}" --dry-run`
-2. Show the plan: renames, creates, updates, conflicts, foreign labels. Ask which foreign labels to delete —
+1. `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" label list --limit 1` — gh reaches
+   the repository as the chosen account. A failure → show gh's error, stop.
+2. `node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" apply --project "${CLAUDE_PROJECT_DIR}" --dry-run`
+3. Show the plan: renames, creates, updates, conflicts, foreign labels. Ask which foreign labels to delete —
    all, some or none — and warn that deleting a label removes it from every issue that has it. A conflict
    (old and new name both exist) is resolved by the user: move the issues, then the old label may be deleted.
-3. After «yes»: `node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" apply --project "${CLAUDE_PROJECT_DIR}"` with one
+4. After «yes»: `node "${CLAUDE_PLUGIN_ROOT}/scripts/labels.mjs" apply --project "${CLAUDE_PROJECT_DIR}"` with one
    `--delete <name>` per label the user named (quote names with spaces). Never pass a name the user did not give.
 
-`auto`: skip the dry run and the question; run `apply` without `--delete`. Foreign labels and conflicts go to the
-report.
+`auto`: run the check of item 1, skip the dry run and the question; run `apply` without `--delete`. Foreign labels
+and conflicts go to the report.
 
 ## 4. Project files
 

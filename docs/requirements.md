@@ -112,7 +112,7 @@ claude-gh-tasks/                    repository and folder; the plugin and the ma
     labels.mjs        create/update labels, rename map, list extras; never deletes without --delete
     milestone.mjs     list / show / create / describe / close / next-version
     milestoneCore.mjs the only place that builds the `repos/<repo>/milestones` API path
-    gh.mjs            gh issue / label / search issues as the project's account; `accounts` lists the logins
+    gh.mjs            gh issue / label / search issues as the project's account; `accounts`: logins and repo access
     cli.mjs           shared entry: runs `main` only when executed directly, an error → one stderr line, exit 1
     test/*.test.mjs   node --test
   docs/
@@ -272,13 +272,15 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
 
 `auto`: Q39.
 
-1. `gh auth status`; repo from `git remote`; existing `.claude/gh-tasks/config.json` → update mode.
+1. Repo from `git remote`; `gh.mjs accounts` — no `gh` or no login → stop; the account in use (configured, else
+   active) cannot see the repo → another login that can is the proposed account, none can → stop with its own
+   message; existing `.claude/gh-tasks/config.json` → update mode.
 2. Questions, one block: milestones yes/no; version scheme (`patch` or a command); language; checks
    (proposed from `package.json` scripts); commit format (proposed from the last ~30 `git log` subjects:
    detected convention, or conventional commits if none, with suggested improvements); existing project
    `commit` skill → absorb and delete, or keep (Q31); gh account when `gh.mjs accounts` lists more than one login
    (Q42) — written to `config.local.json` before the labels, and the file is added to `.gitignore`.
-3. Labels: `labels.mjs apply --dry-run` → show the plan and ask which foreign labels to delete (all / some /
+3. Labels: `gh.mjs label list --limit 1` as the chosen account (a failure stops); `labels.mjs apply --dry-run` → show the plan and ask which foreign labels to delete (all / some /
    none) → `labels.mjs apply [--delete <names>]`: renames where safe, create/update ours, delete only the names
    the user chose (Q33, Q34).
 4. Write `config.json`, a `rules.md` skeleton with the nine headings and one-line hints, and a short
@@ -293,8 +295,8 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
    anything through it, and a permission rule cannot narrow it; `milestone.mjs` is the only door, with the
    path built as `repos/<repo>/milestones[/<n>]` and the method from `GET/POST/PATCH`. `${CLAUDE_PLUGIN_ROOT}` is
    not substituted in `settings.json` and the cache path changes with every version, so the script rules are
-   patterns: `Bash(node *gh-tasks*/scripts/<name>.mjs*)`. Because `gh auth *` is denied, skills check `gh` with
-   `gh label list --limit 1`, not `gh auth status`.
+   patterns: `Bash(node *gh-tasks*/scripts/<name>.mjs*)`. Because `gh auth *` is denied, skills check `gh` through
+   `gh.mjs` (`accounts`, `label list --limit 1`), not `gh auth status`.
 6. Report: what was created, what to review, and the next command (`/gh-tasks:triage` or `/gh-tasks:plan-version`).
 
 ## 10. Non-functional requirements

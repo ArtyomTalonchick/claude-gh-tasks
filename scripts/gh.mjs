@@ -11,7 +11,8 @@
  * Every call runs against the project's repository (`config.repo`, else the `origin` remote): `--repo` is added
  * unless the arguments carry `--repo` or `-R`. gh output and exit code pass through. A permission rule sees only
  * `node …gh.mjs`, so the subcommands are checked here, and the token is never printed.
- * `accounts` lists the logins of github.com and marks the active one.
+ * `accounts` lists the logins of github.com, marks the active one and, when the project's repository is known, says
+ * whether each login can see it.
  */
 import { execFileSync } from "node:child_process";
 import path from "node:path";
@@ -74,6 +75,13 @@ export const parseAccounts = (text) => {
         .map((entry) => ({ login: entry.login, active: entry.active === true }));
 };
 
+/** One line of `accounts`: the login, `(active)`, and whether it can see `repo` when that was checked. */
+export const formatAccount = ({ login, active, canSee }, repo) => {
+    const name = `${login}${active ? " (active)" : ""}`;
+    if (!repo || canSee === undefined) return name;
+    return `${name}: ${canSee ? "can see" : "cannot see"} ${repo}`;
+};
+
 // gh prefers these over the keyring, so they must not leak into the calls that read the keyring
 const withoutTokens = () => {
     const env = { ...process.env };
@@ -107,6 +115,27 @@ export const ghEnv = (projectDir, { readToken = readStoredToken } = {}) => {
     return { ...process.env, GH_TOKEN: readToken(local.account) };
 };
 
+// a label list is what setup and labels.mjs need; a token missing from the keyring counts as no access
+const canSeeRepo = (login, repo) => {
+    try {
+        execFileSync("gh", ["label", "list", "--repo", repo, "--limit", "1"], {
+            stdio: ["ignore", "ignore", "ignore"],
+            env: { ...withoutTokens(), GH_TOKEN: readStoredToken(login) },
+        });
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+const readRepoOrNull = (projectDir) => {
+    try {
+        return resolveRepo(projectDir);
+    } catch {
+        return null;
+    }
+};
+
 const listAccounts = (projectDir) => {
     let output;
     try {
@@ -127,7 +156,10 @@ const listAccounts = (projectDir) => {
         throw new Error(`gh auth status --json failed (gh 2.70 or newer is needed): ${output.stderr.trim()}`);
     }
     if (!accounts.length) throw new Error(`no gh account on ${HOST}: run gh auth login`);
-    accounts.forEach(({ login, active }) => console.log(`${login}${active ? " (active)" : ""}`));
+    const repo = readRepoOrNull(projectDir);
+    accounts
+        .map((account) => ({ ...account, canSee: repo ? canSeeRepo(account.login, repo) : undefined }))
+        .forEach((account) => console.log(formatAccount(account, repo)));
     const { local, errors } = loadLocalConfig(projectDir);
     errors.forEach((error) => console.error(`error: ${error}`));
     console.log(`configured for this project: ${local.account ?? "none, the active account is used"}`);
