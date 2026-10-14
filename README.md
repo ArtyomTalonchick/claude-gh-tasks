@@ -28,10 +28,10 @@ or change single items. It then:
 - writes `.claude/gh-tasks/config.json` and creates `.claude/gh-tasks/rules.md` with empty headings;
 - with several gh accounts logged in, asks which one this project uses — proposing one that can see the
   repository when the active one cannot — and writes it to the git-ignored `.claude/gh-tasks/config.local.json`;
+- merges the permissions below into `.claude/settings.json`, before its first write to GitHub;
 - creates the labels `status:*`, `type:*`, `prio:*`, `size:*` and lists the labels it does not own; it deletes
   only the ones you name;
 - adds a short gh-tasks note to the project `CLAUDE.md`;
-- merges the permissions below into `.claude/settings.json`;
 - with milestones on, offers to create the first milestone.
 
 `/gh-tasks:setup auto` takes every proposed value without questions and deletes nothing. Run `setup` again at any

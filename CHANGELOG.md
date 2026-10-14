@@ -10,6 +10,8 @@
   shown), so the approved file list is the committed one.
 - `setup` runs each proposed check once and shows its time and result, so a broken check (e.g. missing
   dependencies) shows up before the first task; heavy checks are flagged with cheaper variants.
+- `setup` merges the permissions before it applies the labels, so `setup auto` is not blocked on its first write
+  to GitHub.
 
 ## 1.0.0 — 2026-10-14
 

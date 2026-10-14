@@ -75,6 +75,7 @@ file keeps the decisions and their reasons.
 | Q41 | Failing checks and stopping `loop` | Checks still failing after 3 fix attempts → stop and show the failure, the task stays `status:in-progress`, `loop` ends: the uncommitted change blocks the next task. «ok, stop» on the shown diff commits, closes and ends `loop`; `loop` also ends when no task is left |
 | Q42 | gh account | Per project, per user: `account` (a GitHub login) in the git-ignored `.claude/gh-tasks/config.local.json`, asked by `setup` when gh has more than one login. Not in `config.json`: collaborators use different accounts. Every GitHub call of the plugin goes through `scripts/gh.mjs`, which runs `gh` with `GH_TOKEN` read from the gh keyring (`gh auth token --user <login>`) for its own process only. `gh auth switch` is not used: the active account is global and would race between parallel sessions; stopping on a wrong active account is rejected for the same reason. `gh.mjs` allows only `gh issue` (not `delete` / `transfer`), `gh label` (not `delete`: only `labels.mjs apply --delete` deletes labels) and `gh search issues`, because a permission rule matches only the `node …` command line. Every `gh.mjs` call runs against `config.repo`: `--repo` is added unless the call carries `--repo` / `-R`. No `account` → the active account |
 | Q43 | `## Commit` steps and the gate | The `## Commit` steps that change files (a version bump) run before the commit gate, and under `next-task` before the diff is shown, so the user approves the file list that is committed; a step already done in the working tree is not repeated. Steps that need the commit (a tag) run after it |
+| Q44 | `setup` step order | Permissions are merged before the labels are applied: `labels.mjs apply` is the first write to GitHub, and under `auto` a call without a permission rule is blocked |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
 
@@ -282,14 +283,7 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
    detected convention, or conventional commits if none, with suggested improvements); existing project
    `commit` skill → absorb and delete, or keep (Q31); gh account when `gh.mjs accounts` lists more than one login
    (Q42) — written to `config.local.json` before the labels, and the file is added to `.gitignore`.
-3. Labels: `gh.mjs label list --limit 1` as the chosen account (a failure stops); `labels.mjs apply --dry-run` → show the plan and ask which foreign labels to delete (all / some /
-   none) → `labels.mjs apply [--delete <names>]`: renames where safe, create/update ours, delete only the names
-   the user chose (Q33, Q34).
-4. Write `config.json`, a `rules.md` skeleton with the nine headings and one-line hints, and a short
-   paragraph into the project `CLAUDE.md` («Tasks live in GitHub Issues, workflow by the gh-tasks plugin;
-   config in `.claude/gh-tasks/`; a task created from chat gets `status:inbox` and is created through the plugin's
-   `gh.mjs`», Q30).
-5. Permissions: show the block and, after confirmation, merge into the project `.claude/settings.json`:
+3. Permissions: show the block and, after confirmation, merge into the project `.claude/settings.json`:
    allow `Bash(gh issue *)`, `Bash(gh label *)`, `Bash(gh search issues *)`, the plugin scripts (`gh.mjs`
    included); deny
    `Bash(gh api *)`, `gh repo *`, `gh pr *`, `gh workflow *`, `gh secret *`, `gh variable *`, `gh auth *`.
@@ -299,6 +293,13 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
    not substituted in `settings.json` and the cache path changes with every version, so the script rules are
    patterns: `Bash(node *gh-tasks*/scripts/<name>.mjs*)`. Because `gh auth *` is denied, skills check `gh` through
    `gh.mjs` (`accounts`, `label list --limit 1`), not `gh auth status`.
+4. Labels: `gh.mjs label list --limit 1` as the chosen account (a failure stops); `labels.mjs apply --dry-run` → show the plan and ask which foreign labels to delete (all / some /
+   none) → `labels.mjs apply [--delete <names>]`: renames where safe, create/update ours, delete only the names
+   the user chose (Q33, Q34).
+5. Write `config.json`, a `rules.md` skeleton with the nine headings and one-line hints, and a short
+   paragraph into the project `CLAUDE.md` («Tasks live in GitHub Issues, workflow by the gh-tasks plugin;
+   config in `.claude/gh-tasks/`; a task created from chat gets `status:inbox` and is created through the plugin's
+   `gh.mjs`», Q30).
 6. Report: what was created, what to review, and the next command (`/gh-tasks:triage` or `/gh-tasks:plan-version`).
 
 ## 10. Non-functional requirements

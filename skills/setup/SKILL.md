@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Initialise or update a project for the gh-tasks workflow — config, labels, rules skeleton, CLAUDE.md note and permissions. Run by the user as /gh-tasks:setup; other gh-tasks skills point here when the config is missing or invalid.
+description: Initialise or update a project for the gh-tasks workflow — config, permissions, labels, rules skeleton and CLAUDE.md note. Run by the user as /gh-tasks:setup; other gh-tasks skills point here when the config is missing or invalid.
 disable-model-invocation: true
 argument-hint: "[auto]"
 allowed-tools: >-
@@ -46,7 +46,7 @@ chosen in step 2.
 3. `.claude/gh-tasks/config.json` exists → **update mode**: run
    `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"` and use its output as the
    current values. An invalid config is not a stop here: show the errors and fix them through the questions,
-   and write the fixed `config.json` (step 4.1) before step 3 — `labels.mjs` refuses an invalid config.
+   and write the fixed `config.json` (step 5.1) before step 4 — `labels.mjs` refuses an invalid config.
    `auto`: fix each error with the proposed value of step 2 when it is unambiguous; otherwise show the errors and
    stop.
 
@@ -84,7 +84,44 @@ the current value), so the user can reply «ok» or change single items:
 once, and their times, failures and cheaper variants go to the report. A project commit skill is kept; issue
 template extra lines are skipped.
 
-## 3. Labels
+## 3. Permissions
+
+Show this block, and after the user confirms merge it into the project `.claude/settings.json`: add missing
+entries, never remove or reorder existing ones, keep the rest of the file as is. A missing entry goes right after
+the existing entry that precedes it in the block; none exists → at the end of its list.
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue *)", "Bash(gh label *)", "Bash(gh search issues *)",
+      "Bash(node *gh-tasks*/scripts/config.mjs*)", "Bash(node *gh-tasks*/scripts/labels.mjs*)",
+      "Bash(node *gh-tasks*/scripts/milestone.mjs*)", "Bash(node *gh-tasks*/scripts/gh.mjs*)",
+      "PowerShell(gh issue *)", "PowerShell(gh label *)", "PowerShell(gh search issues *)",
+      "PowerShell(node *gh-tasks*/scripts/config.mjs*)", "PowerShell(node *gh-tasks*/scripts/labels.mjs*)",
+      "PowerShell(node *gh-tasks*/scripts/milestone.mjs*)", "PowerShell(node *gh-tasks*/scripts/gh.mjs*)"
+    ],
+    "deny": [
+      "Bash(gh api *)", "Bash(gh repo *)", "Bash(gh pr *)", "Bash(gh workflow *)",
+      "Bash(gh secret *)", "Bash(gh variable *)", "Bash(gh auth *)",
+      "PowerShell(gh api *)", "PowerShell(gh repo *)", "PowerShell(gh pr *)", "PowerShell(gh workflow *)",
+      "PowerShell(gh secret *)", "PowerShell(gh variable *)", "PowerShell(gh auth *)"
+    ]
+  }
+}
+```
+
+The `PowerShell(...)` entries are for Windows; on other systems offer only the `Bash(...)` ones. Explain the deny
+of `gh api` in one line: its token can do anything and a rule cannot narrow it; milestones go through
+`milestone.mjs`, which only reaches `repos/<repo>/milestones`. `gh.mjs` runs only `gh issue`, `gh label` and
+`gh search issues`, as the configured account, so allowing it opens nothing the deny list closes.
+
+Also check that `enabledPlugins` in the same file contains `"gh-tasks@gh-tasks": true`; if the plugin was installed
+in another scope, offer to add it so the project carries the plugin for everyone who clones it.
+
+`auto`: merge the block and add `enabledPlugins` without asking.
+
+## 4. Labels
 
 1. `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" label list --limit 1` — gh reaches
    the repository as the chosen account. A failure → show gh's error, stop.
@@ -98,14 +135,14 @@ template extra lines are skipped.
 `auto`: run the check of item 1, skip the dry run and the question; run `apply` without `--delete`. Foreign labels
 and conflicts go to the report.
 
-## 4. Project files
+## 5. Project files
 
 1. **`.claude/gh-tasks/config.json`** — write every field the user answered in step 2 explicitly (`language`,
    `milestones`, `version`, `checks`, `commit`), so the file documents the project's choices; add `repo` only if
    it differs from `origin` and `issueTemplate` only with extra lines. Plain JSON, two-space indent. In update
    mode keep fields the questions did not touch.
 2. **`.claude/gh-tasks/config.local.json`** — only when the Account question was asked: `{ "account": "<login>" }`,
-   or no `account` field for «none». Write it right after the answers, before step 3, so the labels are applied as
+   or no `account` field for «none». Write it right after the answers, before step 4, so the labels are applied as
    that account. Make sure the project `.gitignore` (created if missing) has the line
    `.claude/gh-tasks/config.local.json`: the login is per user and is never committed.
 3. **`.claude/gh-tasks/rules.md`** — create only if missing; never overwrite. Skeleton:
@@ -157,43 +194,6 @@ and conflicts go to the report.
    already names `gh.mjs` → leave it; one that does not → replace that paragraph, never append a second one.
 5. Validate: `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"`. An error is
    fixed now, not reported as done.
-
-## 5. Permissions
-
-Show this block, and after the user confirms merge it into the project `.claude/settings.json`: add missing
-entries, never remove or reorder existing ones, keep the rest of the file as is. A missing entry goes right after
-the existing entry that precedes it in the block; none exists → at the end of its list.
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(gh issue *)", "Bash(gh label *)", "Bash(gh search issues *)",
-      "Bash(node *gh-tasks*/scripts/config.mjs*)", "Bash(node *gh-tasks*/scripts/labels.mjs*)",
-      "Bash(node *gh-tasks*/scripts/milestone.mjs*)", "Bash(node *gh-tasks*/scripts/gh.mjs*)",
-      "PowerShell(gh issue *)", "PowerShell(gh label *)", "PowerShell(gh search issues *)",
-      "PowerShell(node *gh-tasks*/scripts/config.mjs*)", "PowerShell(node *gh-tasks*/scripts/labels.mjs*)",
-      "PowerShell(node *gh-tasks*/scripts/milestone.mjs*)", "PowerShell(node *gh-tasks*/scripts/gh.mjs*)"
-    ],
-    "deny": [
-      "Bash(gh api *)", "Bash(gh repo *)", "Bash(gh pr *)", "Bash(gh workflow *)",
-      "Bash(gh secret *)", "Bash(gh variable *)", "Bash(gh auth *)",
-      "PowerShell(gh api *)", "PowerShell(gh repo *)", "PowerShell(gh pr *)", "PowerShell(gh workflow *)",
-      "PowerShell(gh secret *)", "PowerShell(gh variable *)", "PowerShell(gh auth *)"
-    ]
-  }
-}
-```
-
-The `PowerShell(...)` entries are for Windows; on other systems offer only the `Bash(...)` ones. Explain the deny
-of `gh api` in one line: its token can do anything and a rule cannot narrow it; milestones go through
-`milestone.mjs`, which only reaches `repos/<repo>/milestones`. `gh.mjs` runs only `gh issue`, `gh label` and
-`gh search issues`, as the configured account, so allowing it opens nothing the deny list closes.
-
-Also check that `enabledPlugins` in the same file contains `"gh-tasks@gh-tasks": true`; if the plugin was installed
-in another scope, offer to add it so the project carries the plugin for everyone who clones it.
-
-`auto`: merge the block and add `enabledPlugins` without asking.
 
 ## 6. Report
 
