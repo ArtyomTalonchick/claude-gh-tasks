@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.0.2 — 2026-10-15
+
 - README: how to update the plugin to a new release.
 - Milestones may be titled `vX.Y` as well as `vX.Y.Z`, with any scheme; `v1.3` is version `1.3.0`, and `create`
   refuses a version that already has a milestone in the other form.
