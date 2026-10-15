@@ -52,7 +52,7 @@ describe("validateConfig", () => {
         [{ language: "" }, "\"language\" must be"],
         [{ milestones: "yes" }, "\"milestones\" must be"],
         [{ version: "patch" }, "\"version\" must be an object"],
-        [{ version: { scheme: "minor" } }, "\"version.scheme\" must be"],
+        [{ version: { scheme: "major" } }, "\"version.scheme\" must be"],
         [{ version: { scheme: "command" } }, "\"version.command\" is required"],
         [{ version: { scheme: "command", command: " " } }, "\"version.command\" must be"],
         [{ checks: "npm test" }, "\"checks\" must be"],
@@ -88,6 +88,13 @@ describe("validateConfig", () => {
 
     test("25. an invalid field falls back to its default", () => {
         assert.equal(validateConfig({ milestones: "yes" }).config.milestones, true);
+    });
+
+    test("26. scheme minor is valid; version.command with it → warning, dropped", () => {
+        const { config, errors, warnings } = validateConfig({ version: { scheme: "minor", command: "node next.mjs" } });
+        assert.deepEqual(errors, []);
+        assert.deepEqual(warnings, ["\"version.command\" is ignored with \"version.scheme\": \"minor\""]);
+        assert.deepEqual(config.version, { scheme: "minor" });
     });
 });
 

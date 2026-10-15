@@ -2,8 +2,8 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
     buildApiArgs, compareVersions, findMilestone, formatLocalTime, getDueOn, getLatestVersion, getMilestonePath,
-    getMilestoneStatus, getNextPatch, getOpenMilestones, isMilestoneTitle, parseVersion, parseVersionOutput,
-    splitCommand,
+    getMilestoneStatus, getNextMinor, getNextPatch, getOpenMilestones, isMilestoneTitle, parseVersion,
+    parseVersionOutput, splitCommand,
 } from "../milestoneCore.mjs";
 
 const REPO = "owner/name";
@@ -29,7 +29,7 @@ describe("isMilestoneTitle / parseVersion", () => {
     });
 });
 
-describe("compareVersions / getLatestVersion / getNextPatch", () => {
+describe("compareVersions / getLatestVersion / getNextPatch / getNextMinor", () => {
     test("1. numeric, not lexical", () => {
         assert.ok(compareVersions("v1.10.0", "v1.9.9") > 0);
         assert.ok(compareVersions("v2.0.0", "v1.99.99") > 0);
@@ -49,6 +49,11 @@ describe("compareVersions / getLatestVersion / getNextPatch", () => {
     test("4. next patch", () => {
         assert.equal(getNextPatch("v0.1.9"), "v0.1.10");
         assert.equal(getNextPatch("v1.0.0"), "v1.0.1");
+    });
+
+    test("5. next minor: patch back to 0", () => {
+        assert.equal(getNextMinor("v0.9.3"), "v0.10.0");
+        assert.equal(getNextMinor("v1.2.0"), "v1.3.0");
     });
 });
 

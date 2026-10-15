@@ -15,8 +15,9 @@
  * can. Here the API path is built only by milestoneCore, so this script is allowed and `gh api` is denied. There is
  * no delete on purpose: a release is closed, not erased.
  *
- * next-version prints the version on the first stdout line. Exit 2: no vX.Y.Z milestone yet, ask the user for
- * the first version.
+ * next-version prints the version on the first stdout line: the highest vX.Y.Z milestone + 1 on patch (scheme
+ * "patch") or on minor with patch 0 (scheme "minor"), or the output of version.command. Exit 2: no vX.Y.Z
+ * milestone yet, ask the user for the first version.
  */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -26,8 +27,8 @@ import { runIfMain } from "./cli.mjs";
 import { loadConfig } from "./config.mjs";
 import { ghEnv } from "./gh.mjs";
 import {
-    buildApiArgs, findMilestone, getDueOn, getLatestVersion, getMilestoneStatus, getNextPatch, getOpenMilestones,
-    isMilestoneTitle, PAGE_SIZE, parseVersionOutput, splitCommand,
+    buildApiArgs, findMilestone, getDueOn, getLatestVersion, getMilestoneStatus, getNextMinor, getNextPatch,
+    getOpenMilestones, isMilestoneTitle, PAGE_SIZE, parseVersionOutput, splitCommand,
 } from "./milestoneCore.mjs";
 
 const EXIT_NO_VERSION = 2;
@@ -172,7 +173,7 @@ const commands = {
             console.error("No vX.Y.Z milestone yet: ask the user for the first version.");
             process.exit(EXIT_NO_VERSION);
         }
-        console.log(getNextPatch(latest));
+        console.log(config.version.scheme === "minor" ? getNextMinor(latest) : getNextPatch(latest));
     },
 };
 

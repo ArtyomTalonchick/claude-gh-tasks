@@ -87,6 +87,8 @@ is the committed one; steps that need the commit itself, such as a tag, run afte
 
 > Never commit generated files under `dist/`.
 
+> Bump the patch: `npm version patch --no-git-tag-version`; its files go into the commit. (`minor` version scheme)
+
 ### After commit
 
 `<!-- next-task, after each commit: syncs, merges -->`
@@ -135,6 +137,9 @@ change files → the milestone is closed without a commit. A project whose CI cl
 > `CHANGELOG.md`: add `## X.Y.Z — YYYY-MM-DD` right under «Unreleased», which stays empty. Run
 > `npm version X.Y.Z --no-git-tag-version`. Commit message: `chore: release X.Y.Z`. After the commit:
 > `git tag vX.Y.Z`.
+
+> Set the version: `npm version X.Y.0 --no-git-tag-version`. After the commit: `git tag vX.Y.0`. (`minor` version
+> scheme)
 
 ## Writing good rules
 

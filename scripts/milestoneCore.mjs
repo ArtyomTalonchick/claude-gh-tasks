@@ -32,6 +32,11 @@ export const getNextPatch = (version) => {
     return `v${major}.${minor}.${patch + 1}`;
 };
 
+export const getNextMinor = (version) => {
+    const [major, minor] = parseVersion(version);
+    return `v${major}.${minor + 1}.0`;
+};
+
 export const getMilestonePath = (repo, number) => {
     if (!isRepo(repo)) throw new Error(`the repository must be "owner/name", got ${JSON.stringify(repo)}`);
     if (number !== undefined && !(Number.isInteger(number) && number > 0)) {

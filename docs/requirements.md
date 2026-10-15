@@ -38,7 +38,7 @@ file keeps the decisions and their reasons.
 | Q3 | Audience | One user today, designed so anyone can install it: no absolute paths, secrets or personal settings inside; `gh` permissions live in settings, not in the plugin |
 | Q4 | v1 scope | See section 1 |
 | Q5 | Milestones | Optional per project (`milestones: true/false`); without them `next-task` orders by labels and `plan-version` is unavailable |
-| Q6 | Milestone version scheme | Chosen at setup: `patch` (default) or a project `command` that prints the next version (prosportcards seasons) |
+| Q6 | Milestone version scheme | Chosen at setup: `patch` (default), `minor`, or a project `command` that prints the next version (prosportcards seasons). `minor` is proposed when `package.json` has a `version` or `vX.Y.0` tags exist. The manifest bump (a patch per commit, `X.Y.0` at release) and the tag are not plugin code: with `minor`, `setup` proposes them as `## Commit` / `## Close version` steps of `rules.md`, with their permissions (Q45) |
 | Q7 | Language | Plugin, skills and docs in English. Working language of issues, milestone text and chat is configurable per project, any language |
 | Q8 | Commit format | Default conventional commits `type(scope): subject`; `setup` studies `git log` and proposes the project's own convention, possibly improved |
 | Q9 | Project customisation | JSON config for machine-readable fields + a prose Markdown addendum read at fixed extension points |
@@ -61,13 +61,13 @@ file keeps the decisions and their reasons.
 | Q26 | `setup` | Section 9 |
 | Q27 | Hooks | None in v1; the config check is the first step of every skill |
 | Q28 | Documents | This file, `README.md`, `docs/extension-points.md`; chat summaries may be in any language |
-| Q29 | Next version for `scheme: "patch"` | From GitHub milestones: highest `vX.Y.Z` title (open or closed) + 1 on patch; no milestones yet → ask the user for the first version. Git tags are not read; a project that tags uses `scheme: "command"` |
+| Q29 | Next version for `scheme: "patch"` and `"minor"` | From GitHub milestones: highest `vX.Y.Z` title (open or closed) + 1 on patch, or + 1 on minor with patch 0; no milestones yet → ask the user for the first version. Git tags are not read for the version (`setup` looks at them only to propose `minor`); a project whose version lives elsewhere uses `scheme: "command"` |
 | Q30 | Issue creation skill | None. Issues are created on GitHub by hand or by asking in chat; an open issue without type, priority and size is untriaged. A chat issue goes through `gh.mjs … issue create --label status:inbox`, so it is written as the project's account (Q42). The `CLAUDE.md` paragraph names the wrapper by its role — the `scripts/gh.mjs` of the installed gh-tasks plugin, under `~/.claude/plugins/cache/gh-tasks/` — not by a path or a glob: the cache path changes with every version, and a glob is not runnable. `setup` replaces an older gh-tasks paragraph that does not name `gh.mjs` |
 | Q31 | Project `commit` skill | The plugin ships `commit`. `setup` detects a project `.claude/skills/commit` and asks: absorb it and delete it — the format into `config.commit`, every other step into `rules.md → ## Commit`, each step shown with where it goes before the skill is deleted — or leave it (then `next-task` still commits only through `gh-tasks:commit`) |
 | Q32 | Install scope | Project scope (`enabledPlugins` in the project `.claude/settings.json`, committed). Not user scope: that would inject `/next-task` into projects with their own, e.g. prosportcards |
 | Q33 | Label renames: propose or apply | Both: `setup` runs `labels.mjs apply --dry-run`, shows the plan (renames, conflicts, creates, updates, foreign labels), and runs `apply` after the user's «yes» |
 | Q34 | Rename map and foreign labels | Map: `inbox`, `in-progress`, `bug`, `feature`, `wish`, `ops` → their prefixed names; `p1/p2/p3` → `prio:critical/normal/minor`; `size-s/m/l` → `size:s/m/l`. GitHub's `enhancement` is not renamed (broader meaning) and stays foreign. `setup` lists all foreign labels (GitHub defaults included) and asks: delete all, some or none — deleting a label removes it from its issues |
-| Q35 | Milestone title | Always `vX.Y.Z`, with either version scheme; the first stdout line of `version.command` is checked against the same pattern |
+| Q35 | Milestone title | Always `vX.Y.Z`, with any version scheme; the first stdout line of `version.command` is checked against the same pattern |
 | Q36 | Running `version.command` | Without a shell: split into arguments (simple quotes supported), `execFileSync` in the project root. On Windows the command starts with an executable (`node …`): `npm run …` needs a shell and is not run |
 | Q37 | One open milestone | Enforced by `milestone.mjs create` itself (refuses while another milestone is open), not only by `plan-version` |
 | Q38 | Triage gate | `triage` shows all proposed outcomes in one table and writes to GitHub only after «ok»; under `plan-version` the table is part of its gate. `triage auto` writes triaged issues without the gate (`next-task auto` calls it this way), but closing an issue always needs the user's confirmation |
@@ -217,7 +217,7 @@ through `gh-tasks:commit` (no `## Close version` file changes → no commit) →
   "repo": "owner/name",                 // optional; default: parsed from `git remote get-url origin`
   "language": "en",                     // language of issues, milestones, comments; chat follows the user
   "milestones": true,                   // false: no plan-version, next-task orders by labels
-  "version": { "scheme": "patch" },     // or { "scheme": "command", "command": "node tools/release/release.mjs next-version" }
+  "version": { "scheme": "patch" },     // or "minor", or { "scheme": "command", "command": "node tools/release/release.mjs next-version" }
   "checks": ["npm run lint", "npx tsc --noEmit", "npm test"],
   "commit": {
     "format": "type(scope): subject",   // human-readable pattern shown to the model
@@ -294,7 +294,7 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
 1. Repo from `git remote`; `gh.mjs accounts` — no `gh` or no login → stop; the account in use (configured, else
    active) cannot see the repo → another login that can is the proposed account, none can → stop with its own
    message; existing `.claude/gh-tasks/config.json` → update mode.
-2. Questions, one block: milestones yes/no; version scheme (`patch` or a command); language; checks
+2. Questions, one block: milestones yes/no; version scheme (`patch`, `minor` or a command; `minor` brings its `rules.md` steps); language; checks
    (proposed from `package.json` scripts, each run once with its time and result shown; a heavy one is flagged
    with a cheaper variant such as `tsc --noEmit` or `vitest run --changed`); commit format (proposed from the last ~30 `git log` subjects:
    detected convention, or conventional commits if none, with suggested improvements); existing project

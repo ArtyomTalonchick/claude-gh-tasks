@@ -13,6 +13,7 @@ allowed-tools: >-
   Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
   Bash(git log *) PowerShell(git log *)
+  Bash(git tag --list *) PowerShell(git tag --list *)
   Bash(git remote get-url *) PowerShell(git remote get-url *)
 ---
 
@@ -56,10 +57,16 @@ Collect the facts first, then ask everything in one block, each question with a 
 the current value), so the user can reply «ok» or change single items:
 
 - **Milestones** — plan releases as GitHub milestones? Default: yes.
-- **Version scheme** (only with milestones) — `patch` (next version = highest `vX.Y.Z` milestone + 1 on patch) or
-  a project command that prints the next version on its first stdout line. The command runs without a shell from
-  the project root; on Windows it must start with an executable such as `node`, not `npm run`.
-  Milestone titles are always `vX.Y.Z`.
+- **Version scheme** (only with milestones) — `patch` (next version = highest `vX.Y.Z` milestone + 1 on patch),
+  `minor` (highest `vX.Y.Z` milestone + 1 on minor, patch 0) or a project command that prints the next version
+  on its first stdout line. The command runs without a shell from the project root; on Windows it must start with
+  an executable such as `node`, not `npm run`. Milestone titles are always `vX.Y.Z`. Propose `minor` when
+  `package.json` has a `version` or `git tag --list "v*.*.0"` shows release tags, else `patch`.
+  With `minor`, the manifest version and the tag are project steps, proposed with the question and written to
+  `rules.md` in step 5: under `## Commit` «Bump the patch: `npm version patch --no-git-tag-version`; its files go
+  into the commit», under `## Close version` «Set the version: `npm version X.Y.0 --no-git-tag-version`. After the
+  commit: `git tag vX.Y.0`». No `package.json` → the same steps without a command; the user names it or drops
+  the step. A heading that already holds a version step keeps it and gets nothing.
 - **Language** of issues, milestones and comments — propose the language of recent issues and commits.
 - **Checks** — commands run before showing a change; propose them from `package.json` scripts (lint, type check,
   test). None found → propose an empty list; never invent commands. Run each proposed check once in the project
@@ -120,7 +127,7 @@ Also check that `enabledPlugins` in the same file contains `"gh-tasks@gh-tasks":
 in another scope, offer to add it so the project carries the plugin for everyone who clones it.
 
 **Rule commands.** The steps under the headings of `rules.md` (the existing file plus the steps of a project commit
-skill being absorbed) may run shell commands — `npm version patch`, `git tag v1.2.3`, the release steps under
+skill being absorbed, and the version steps of a `minor` scheme) may run shell commands — `npm version patch`, `git tag v1.2.3`, the release steps under
 `## Close version` — and every such call asks for permission. List one rule per command and subcommand, `Bash(npm version *)`, `Bash(git tag *)` (and the
 `PowerShell(...)` twins on Windows), each with the heading it comes from. Leave out a command already allowed, one
 the deny list above matches, and one that reaches the git remote (`git push`, `fetch`, `pull`). The user confirms
@@ -194,6 +201,7 @@ and conflicts go to the report.
    ```
 
    In update mode with an existing file: add any missing headings at the end, leave the rest untouched.
+   The version steps of a `minor` scheme the user accepted in step 2: append each under its heading.
    An absorbed commit skill: append its non-format steps under `## Commit`, after what is already there. Delete
    the skill only after `config.json` and `rules.md` hold what it held.
 4. **Project `CLAUDE.md`** — this paragraph, once:

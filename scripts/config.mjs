@@ -58,7 +58,10 @@ const SCHEMA = {
     milestones: boolean,
     version: {
         fields: {
-            scheme: { check: (value) => ["patch", "command"].includes(value), expected: "\"patch\" or \"command\"" },
+            scheme: {
+                check: (value) => ["patch", "minor", "command"].includes(value),
+                expected: "\"patch\", \"minor\" or \"command\"",
+            },
             command: string,
         },
     },
@@ -123,8 +126,8 @@ export const validateConfig = (raw) => {
     if (version.scheme === "command" && !version.command && !errors.some((e) => e.startsWith("\"version.command\""))) {
         errors.push("\"version.command\" is required when \"version.scheme\" is \"command\"");
     }
-    if (version.scheme === "patch" && version.command) {
-        warnings.push("\"version.command\" is ignored with \"version.scheme\": \"patch\"");
+    if (version.scheme !== "command" && version.command) {
+        warnings.push(`"version.command" is ignored with "version.scheme": "${version.scheme}"`);
         delete version.command;
     }
     return { config, errors, warnings };
