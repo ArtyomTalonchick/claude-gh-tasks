@@ -57,10 +57,10 @@ Collect the facts first, then ask everything in one block, each question with a 
 the current value), so the user can reply «ok» or change single items:
 
 - **Milestones** — plan releases as GitHub milestones? Default: yes.
-- **Version scheme** (only with milestones) — `patch` (next version = highest `vX.Y.Z` milestone + 1 on patch),
-  `minor` (highest `vX.Y.Z` milestone + 1 on minor, patch 0) or a project command that prints the next version
-  on its first stdout line. The command runs without a shell from the project root; on Windows it must start with
-  an executable such as `node`, not `npm run`. Milestone titles are always `vX.Y.Z`. Propose `minor` when
+- **Version scheme** (only with milestones) — `patch` (next version = highest release milestone + 1 on patch,
+  titled `vX.Y.Z`), `minor` (+ 1 on minor, titled `vX.Y`) or a project command that prints the next version on its
+  first stdout line. The command runs without a shell from the project root; on Windows it must start with an
+  executable such as `node`, not `npm run`. Milestone titles are `vX.Y.Z` or `vX.Y` (= `vX.Y.0`). Propose `minor` when
   `package.json` has a `version` or `git tag --list "v*.*.0"` shows release tags, else `patch`.
   With `minor`, the manifest version and the tag are project steps, proposed with the question and written to
   `rules.md` in step 5: under `## Commit` «Bump the patch: `npm version patch --no-git-tag-version`; its files go
@@ -222,8 +222,8 @@ Short list: what was created or changed (labels, files, settings), what the user
 
 With milestones on and no open milestone, offer to create the first one: run
 `node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" next-version --project "${CLAUDE_PROJECT_DIR}"`; exit code 2 means
-no `vX.Y.Z` milestone exists yet — ask the user for the first version. After the user confirms the title, run
-`node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" create --project "${CLAUDE_PROJECT_DIR}" --title <vX.Y.Z>`.
+no release milestone exists yet — ask the user for the first version. After the user confirms the title, run
+`node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" create --project "${CLAUDE_PROJECT_DIR}" --title <title>`.
 This step is optional; skip it on «no».
 
 `auto`: the report also lists every value taken in step 2, the foreign labels and conflicts left in place and the

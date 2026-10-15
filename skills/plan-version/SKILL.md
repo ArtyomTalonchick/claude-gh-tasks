@@ -38,8 +38,8 @@ the scope. A missing file or heading is skipped silently.
 - An open milestone → **replan** it: `milestone.mjs show --title <it>` gives its description and issues; the
   version stays.
 - No open milestone → the version is the first stdout line of `milestone.mjs next-version`. Exit code 2 → no
-  `vX.Y.Z` milestone exists yet: ask the user for the first version, also under `auto`. The user may change the
-  version at the gate; it must match `vX.Y.Z` and not exist yet.
+  release milestone exists yet: ask the user for the first version, also under `auto`. The user may change the
+  version at the gate; it must match `vX.Y` or `vX.Y.Z` and not exist yet in either form (`v1.2` is `v1.2.0`).
 
 ## 3. Candidates
 
@@ -58,7 +58,7 @@ Candidates: open issues with no milestone, plus the issues of the open milestone
 
 ## 4. Carry-over
 
-The most recently closed `vX.Y.Z` milestone: `milestone.mjs show --title <it>`. Its sections «Deliberately not in
+The most recently closed release milestone: `milestone.mjs show --title <it>`. Its sections «Deliberately not in
 this release», «Next, by themes» and «Hard dependencies» are input for the theme and the order. Issues named there
 and still open are candidates like any other.
 
@@ -95,14 +95,14 @@ report.
 2. The description: fill `${CLAUDE_PLUGIN_ROOT}/skills/plan-version/templates/milestone.md`, headings and fixed
    lines translated to `config.language`; drop empty groups and sections. Write it to a temporary file outside the
    project (the session scratch directory or the OS temp directory) with the Write tool, not a shell heredoc.
-3. New milestone: `milestone.mjs create --title <vX.Y.Z> --file <file>`, plus `--due <YYYY-MM-DD>` with an agreed
-   date. Replan: `milestone.mjs describe --title <vX.Y.Z> --file <file>`.
+3. New milestone: `milestone.mjs create --title <version> --file <file>`, plus `--due <YYYY-MM-DD>` with an agreed
+   date. Replan: `milestone.mjs describe --title <version> --file <file>`.
 4. Delete the temporary file.
 5. Each issue in the groups:
-   `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --milestone <vX.Y.Z>`.
+   `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --milestone <version>`.
    Each issue of the open milestone now left out:
    `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --remove-milestone`.
-6. Verify: `milestone.mjs show --title <vX.Y.Z>` lists exactly the issues of the description. GitHub lists issues
+6. Verify: `milestone.mjs show --title <version>` lists exactly the issues of the description. GitHub lists issues
    by milestone with a delay of a few seconds: on a mismatch run `show` once more, and only then fix it, not report
    it.
 

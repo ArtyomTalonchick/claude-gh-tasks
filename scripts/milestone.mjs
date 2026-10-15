@@ -1,6 +1,6 @@
 /*
- * Milestones of the project tracker; a milestone is a release named vX.Y.Z. The order of tasks inside it lives in
- * the milestone description, which `plan-version` writes.
+ * Milestones of the project tracker; a milestone is a release named vX.Y.Z, or vX.Y for vX.Y.0. The order of
+ * tasks inside it lives in the milestone description, which `plan-version` writes.
  *
  *   node scripts/milestone.mjs list         --project <dir>
  *   node scripts/milestone.mjs show         --project <dir> --title v1.3.9
@@ -15,9 +15,11 @@
  * can. Here the API path is built only by milestoneCore, so this script is allowed and `gh api` is denied. There is
  * no delete on purpose: a release is closed, not erased.
  *
- * next-version prints the version on the first stdout line: the highest vX.Y.Z milestone + 1 on patch (scheme
- * "patch") or on minor with patch 0 (scheme "minor"), or the output of version.command. Exit 2: no vX.Y.Z
+ * next-version prints the version on the first stdout line: the highest release milestone + 1 on patch as vX.Y.Z
+ * (scheme "patch") or + 1 on minor as vX.Y (scheme "minor"), or the output of version.command. Exit 2: no release
  * milestone yet, ask the user for the first version.
+ *
+ * v1.2 and v1.2.0 are one version: create refuses a version that already has a milestone in either form.
  */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -27,8 +29,8 @@ import { runIfMain } from "./cli.mjs";
 import { loadConfig } from "./config.mjs";
 import { ghEnv } from "./gh.mjs";
 import {
-    buildApiArgs, findMilestone, getDueOn, getLatestVersion, getMilestoneStatus, getNextMinor, getNextPatch,
-    getOpenMilestones, isMilestoneTitle, PAGE_SIZE, parseVersionOutput, splitCommand,
+    buildApiArgs, findMilestone, findSameVersion, getDueOn, getLatestVersion, getMilestoneStatus, getNextMinor,
+    getNextPatch, getOpenMilestones, isMilestoneTitle, PAGE_SIZE, parseVersionOutput, splitCommand,
 } from "./milestoneCore.mjs";
 
 const EXIT_NO_VERSION = 2;
@@ -85,7 +87,7 @@ const createContext = (args) => {
 
     const requireTitle = () => {
         if (!args.title) throw new Error("--title vX.Y.Z is required");
-        if (!isMilestoneTitle(args.title)) throw new Error(`a milestone is named vX.Y.Z, got ${args.title}`);
+        if (!isMilestoneTitle(args.title)) throw new Error(`a milestone is named vX.Y or vX.Y.Z, got ${args.title}`);
         return args.title;
     };
 
@@ -132,7 +134,8 @@ const commands = {
         const dueOn = getDueOn(args.due);
         const description = readDescription() ?? "";
         const milestones = getMilestones();
-        if (findMilestone(milestones, title)) throw new Error(`milestone ${title} already exists`);
+        const same = findSameVersion(milestones, title);
+        if (same) throw new Error(`version ${title} already exists as milestone ${same.title}`);
         const open = getOpenMilestones(milestones);
         if (open.length) {
             throw new Error(`one open milestone at a time: ${open.map((m) => m.title).join(", ")} is still open`);
@@ -170,7 +173,7 @@ const commands = {
         }
         const latest = getLatestVersion(getMilestones().map((milestone) => milestone.title));
         if (!latest) {
-            console.error("No vX.Y.Z milestone yet: ask the user for the first version.");
+            console.error("No vX.Y or vX.Y.Z milestone yet: ask the user for the first version.");
             process.exit(EXIT_NO_VERSION);
         }
         console.log(config.version.scheme === "minor" ? getNextMinor(latest) : getNextPatch(latest));

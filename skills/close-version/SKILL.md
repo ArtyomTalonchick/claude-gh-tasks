@@ -37,13 +37,13 @@ is skipped silently.
 ## 2. State
 
 1. `milestone.mjs list`. No open milestone → «No open milestone to close — plan one with
-   `/gh-tasks:plan-version`», stop. The version is its title without the leading `v`.
+   `/gh-tasks:plan-version`», stop. The version is its title without the leading `v`, always `X.Y.Z`: a `vX.Y` title is version `X.Y.0`.
 2. `git status --short` is not empty → show it, say «Commit or stash these changes first: the release commit holds
    only the release steps», stop.
 
 ## 3. Open issues
 
-`milestone.mjs show --title <vX.Y.Z>` lists the milestone's issues.
+`milestone.mjs show --title <title>` lists the milestone's issues.
 
 - An open issue with `status:in-progress` → «#N is still in progress — finish it with `/gh-tasks:next-task` first»,
   stop.
@@ -81,7 +81,7 @@ the «ok».
 
 1. A release commit → run the `gh-tasks:commit` skill without `#N`; the «ok» of step 5 is its approval.
 2. The `## Close version` steps that need the commit.
-3. `milestone.mjs close --title <vX.Y.Z>`. It refuses while the milestone has open issues: GitHub lists issues by
+3. `milestone.mjs close --title <title>`. It refuses while the milestone has open issues: GitHub lists issues by
    milestone with a delay of a few seconds, so after step 3 run it once more before reporting the failure.
 
 ## 7. Report

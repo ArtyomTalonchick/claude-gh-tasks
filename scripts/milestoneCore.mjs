@@ -5,15 +5,15 @@
  */
 import { isRepo } from "./config.mjs";
 
-// A milestone is named as the version it releases
-export const MILESTONE_TITLE_PATTERN = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+// A milestone is named as the version it releases: vX.Y.Z, or vX.Y for vX.Y.0
+export const MILESTONE_TITLE_PATTERN = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?$/;
 
 export const isMilestoneTitle = (title) => typeof title === "string" && MILESTONE_TITLE_PATTERN.test(title);
 
-/** "v1.2.3" → [1, 2, 3]; anything else → null */
+/** "v1.2.3" → [1, 2, 3]; "v1.2" → [1, 2, 0]; anything else → null */
 export const parseVersion = (title) => {
     const match = typeof title === "string" ? title.match(MILESTONE_TITLE_PATTERN) : null;
-    return match ? match.slice(1).map(Number) : null;
+    return match ? match.slice(1).map((part) => Number(part ?? 0)) : null;
 };
 
 export const compareVersions = (a, b) => {
@@ -21,7 +21,7 @@ export const compareVersions = (a, b) => {
     return left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
 };
 
-/** The highest vX.Y.Z among the titles (other titles are ignored); none → null */
+/** The highest version among the titles (other titles are ignored); none → null */
 export const getLatestVersion = (titles) => (titles ?? [])
     .filter(isMilestoneTitle)
     .sort(compareVersions)
@@ -32,9 +32,10 @@ export const getNextPatch = (version) => {
     return `v${major}.${minor}.${patch + 1}`;
 };
 
+// A minor release is titled vX.Y
 export const getNextMinor = (version) => {
     const [major, minor] = parseVersion(version);
-    return `v${major}.${minor + 1}.0`;
+    return `v${major}.${minor + 1}`;
 };
 
 export const getMilestonePath = (repo, number) => {
@@ -69,7 +70,12 @@ export const buildApiArgs = (method, repo, { number, page = 1, hasPayload = fals
 
 export const findMilestone = (milestones, title) => milestones.find((milestone) => milestone.title === title);
 
-// Open release milestones; a milestone not named vX.Y.Z belongs to someone else and is ignored
+/** The release milestone of the same version in either form: v1.2 and v1.2.0 are one version */
+export const findSameVersion = (milestones, title) => milestones.find((milestone) => (
+    isMilestoneTitle(milestone.title) && compareVersions(milestone.title, title) === 0
+));
+
+// Open release milestones; a milestone not named vX.Y or vX.Y.Z belongs to someone else and is ignored
 export const getOpenMilestones = (milestones) => milestones
     .filter((milestone) => milestone.state === "open" && isMilestoneTitle(milestone.title));
 
@@ -136,7 +142,7 @@ export const splitCommand = (command) => {
 export const parseVersionOutput = (stdout) => {
     const line = (stdout ?? "").split(/\r?\n/)[0].trim();
     if (!isMilestoneTitle(line)) {
-        throw new Error(`version.command must print vX.Y.Z on its first line, got ${JSON.stringify(line)}`);
+        throw new Error(`version.command must print vX.Y or vX.Y.Z on its first line, got ${JSON.stringify(line)}`);
     }
     return line;
 };

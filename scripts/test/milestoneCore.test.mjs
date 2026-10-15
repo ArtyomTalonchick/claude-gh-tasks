@@ -1,9 +1,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-    buildApiArgs, compareVersions, findMilestone, formatLocalTime, getDueOn, getLatestVersion, getMilestonePath,
-    getMilestoneStatus, getNextMinor, getNextPatch, getOpenMilestones, isMilestoneTitle, parseVersion,
-    parseVersionOutput, splitCommand,
+    buildApiArgs, compareVersions, findMilestone, findSameVersion, formatLocalTime, getDueOn, getLatestVersion,
+    getMilestonePath, getMilestoneStatus, getNextMinor, getNextPatch, getOpenMilestones, isMilestoneTitle,
+    parseVersion, parseVersionOutput, splitCommand,
 } from "../milestoneCore.mjs";
 
 const REPO = "owner/name";
@@ -13,8 +13,13 @@ describe("isMilestoneTitle / parseVersion", () => {
         ["v1.3.9", [1, 3, 9]],
         ["v1.10.0", [1, 10, 0]],
         ["v0.0.0", [0, 0, 0]],
+        ["v1.3", [1, 3, 0]],
+        ["v0.10", [0, 10, 0]],
         ["1.3.9", null],
-        ["v1.3", null],
+        ["v1", null],
+        ["v1.3.", null],
+        ["v01.3", null],
+        ["v1.3.9.1", null],
         ["v1.3.9-rc", null],
         [" v1.3.9", null],
         ["v01.2.3", null],
@@ -36,24 +41,34 @@ describe("compareVersions / getLatestVersion / getNextPatch / getNextMinor", () 
         assert.equal(compareVersions("v1.2.3", "v1.2.3"), 0);
     });
 
-    test("2. the highest vX.Y.Z wins, other titles ignored", () => {
-        assert.equal(getLatestVersion(["v0.1.0", "Backlog", "v0.10.0", "v0.9.3"]), "v0.10.0");
+    test("2. vX.Y is vX.Y.0", () => {
+        assert.equal(compareVersions("v1.3", "v1.3.0"), 0);
+        assert.ok(compareVersions("v1.3.1", "v1.3") > 0);
+        assert.ok(compareVersions("v1.10", "v1.9.9") > 0);
     });
 
-    test("3. no versions → null", () => {
+    test("3. the highest version wins, other titles ignored", () => {
+        assert.equal(getLatestVersion(["v0.1.0", "Backlog", "v0.10.0", "v0.9.3"]), "v0.10.0");
+        assert.equal(getLatestVersion(["v1.2.0", "v1.3", "v1.2.5"]), "v1.3");
+        assert.equal(getLatestVersion(["v1.3", "v1.3.1", "v1.2"]), "v1.3.1");
+    });
+
+    test("4. no versions → null", () => {
         assert.equal(getLatestVersion([]), null);
         assert.equal(getLatestVersion(["Someday"]), null);
         assert.equal(getLatestVersion(undefined), null);
     });
 
-    test("4. next patch", () => {
+    test("5. next patch: always vX.Y.Z", () => {
         assert.equal(getNextPatch("v0.1.9"), "v0.1.10");
         assert.equal(getNextPatch("v1.0.0"), "v1.0.1");
+        assert.equal(getNextPatch("v1.3"), "v1.3.1");
     });
 
-    test("5. next minor: patch back to 0", () => {
-        assert.equal(getNextMinor("v0.9.3"), "v0.10.0");
-        assert.equal(getNextMinor("v1.2.0"), "v1.3.0");
+    test("6. next minor: always vX.Y", () => {
+        assert.equal(getNextMinor("v0.9.3"), "v0.10");
+        assert.equal(getNextMinor("v1.2.0"), "v1.3");
+        assert.equal(getNextMinor("v1.2"), "v1.3");
     });
 });
 
@@ -116,20 +131,30 @@ describe("buildApiArgs", () => {
     });
 });
 
-describe("findMilestone / getOpenMilestones", () => {
+describe("findMilestone / findSameVersion / getOpenMilestones", () => {
     const milestones = [
         { title: "v0.1.0", number: 1, state: "closed" },
         { title: "v0.1.1", number: 2, state: "open" },
         { title: "Backlog", number: 3, state: "open" },
+        { title: "v0.2", number: 4, state: "closed" },
+        { title: "v0.3", number: 5, state: "open" },
     ];
 
-    test("1. by title", () => {
+    test("1. by exact title", () => {
         assert.equal(findMilestone(milestones, "v0.1.1").number, 2);
         assert.equal(findMilestone(milestones, "v9.9.9"), undefined);
+        assert.equal(findMilestone(milestones, "v0.2.0"), undefined);
     });
 
-    test("2. open release milestones only, foreign titles ignored", () => {
-        assert.deepEqual(getOpenMilestones(milestones).map((m) => m.title), ["v0.1.1"]);
+    test("2. the same version in either form", () => {
+        assert.equal(findSameVersion(milestones, "v0.2.0").number, 4);
+        assert.equal(findSameVersion(milestones, "v0.1").number, 1);
+        assert.equal(findSameVersion(milestones, "v0.1.1").number, 2);
+        assert.equal(findSameVersion(milestones, "v0.2.1"), undefined);
+    });
+
+    test("3. open release milestones only, foreign titles ignored", () => {
+        assert.deepEqual(getOpenMilestones(milestones).map((m) => m.title), ["v0.1.1", "v0.3"]);
     });
 });
 
@@ -178,9 +203,10 @@ describe("parseVersionOutput", () => {
         assert.equal(parseVersionOutput("v1.4.0\nPatch +1 from v1.3.9\n"), "v1.4.0");
         assert.equal(parseVersionOutput("v1.4.0\r\n"), "v1.4.0");
         assert.equal(parseVersionOutput("  v1.4.0  "), "v1.4.0");
+        assert.equal(parseVersionOutput("v1.4\n"), "v1.4");
     });
 
-    ["1.4.0", "", "Next: v1.4.0", undefined].forEach((stdout, i) => {
+    ["1.4.0", "", "Next: v1.4.0", "v1", undefined].forEach((stdout, i) => {
         test(`${i + 2}. refused: ${JSON.stringify(stdout)}`, () => {
             assert.throws(() => parseVersionOutput(stdout), /vX\.Y\.Z/);
         });

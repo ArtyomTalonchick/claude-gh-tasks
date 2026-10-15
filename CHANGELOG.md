@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Version scheme `minor`: a milestone is a minor release (`v1.2.0` → `v1.3.0`). With it, `setup` proposes the
+- Milestones may be titled `vX.Y` as well as `vX.Y.Z`, with any scheme; `v1.3` is version `1.3.0`, and `create`
+  refuses a version that already has a milestone in the other form.
+- Version scheme `minor`: a milestone is a minor release titled `vX.Y` (`v1.2` → `v1.3`). With it, `setup` proposes the
   `rules.md` steps that bump the `package.json` patch with every commit and set the version and tag at release.
 - `/gh-tasks:close-version` closes the open release milestone: it settles the issues left open, runs the release
   steps of the new `rules.md → ## Close version` heading (version bump, changelog), commits them after one gate and

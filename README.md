@@ -81,7 +81,7 @@ No skill pushes, pulls or fetches: the remote is yours.
 | `repo` | `owner/name` of the GitHub repository | parsed from `git remote get-url origin` |
 | `language` | language of issues, milestones and comments; chat follows you | `en` |
 | `milestones` | plan releases as milestones; `false` turns off `plan-version` and `next-task` orders by labels | `true` |
-| `version` | `{ "scheme": "patch" }` (highest `vX.Y.Z` milestone + 1 on patch), `{ "scheme": "minor" }` (+ 1 on minor, patch 0) or `{ "scheme": "command", "command": "…" }` that prints the next version on its first stdout line | `patch` |
+| `version` | `{ "scheme": "patch" }` (highest release milestone + 1 on patch, titled `vX.Y.Z`), `{ "scheme": "minor" }` (+ 1 on minor, titled `vX.Y`) or `{ "scheme": "command", "command": "…" }` that prints the next version on its first stdout line | `patch` |
 | `checks` | commands run before a change is shown, e.g. `["npm run lint", "npm test"]` | `[]` |
 | `commit` | `format`, `example`, `types` and `trailers` of commit messages | `type(scope): subject`, no trailers |
 | `issueTemplate.extraLines` | extra lines of the issue body template, e.g. «Who is affected» | `[]` |
