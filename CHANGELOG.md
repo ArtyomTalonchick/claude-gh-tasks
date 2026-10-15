@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.0.3 — 2026-10-15
+
 ## 1.0.2 — 2026-10-15
 
 - README: how to update the plugin to a new release.
