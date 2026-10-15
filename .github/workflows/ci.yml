@@ -19,4 +19,3 @@ jobs:
       - run: npm run lint
       - run: npm install -g @anthropic-ai/claude-code
       - run: claude plugin validate . --strict
-      - run: claude plugin validate skills --strict
