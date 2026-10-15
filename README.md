@@ -39,6 +39,17 @@ or change single items. It then:
 `/gh-tasks:setup auto` takes every proposed value without questions and deletes nothing. Run `setup` again at any
 time: it only adds or updates.
 
+## Update
+
+```
+claude plugin marketplace update gh-tasks
+claude plugin update gh-tasks@gh-tasks --scope project
+```
+
+The first command refreshes the marketplace from GitHub, the second updates the plugin in the project; restart
+Claude Code to apply it. An update arrives only when the release's `version` is higher than the installed one —
+`claude plugin list` shows the installed version, [`CHANGELOG.md`](CHANGELOG.md) what changed.
+
 ## The cycle
 
 1. **Create issues** — on GitHub by hand, or ask Claude in chat; an issue created from chat gets `status:inbox`.
@@ -116,6 +127,6 @@ lists an allow rule for each one and adds the ones you confirm; `setup auto` onl
 ## Development
 
 `claude plugin marketplace add ./claude-gh-tasks` from the parent folder loads the plugin in place;
-`/reload-plugins` picks up edits. Run `npm test`, `npm run lint` and `claude plugin validate .` after a change.
-CI (`.github/workflows/ci.yml`) runs the same checks, with `--strict` validation, on every push to `main` and pull
-request.
+`/reload-plugins` picks up edits, with no update or version bump. Run `npm test`, `npm run lint` and
+`claude plugin validate .` after a change. CI (`.github/workflows/ci.yml`) runs the same checks, with `--strict`
+validation, on every push to `main` and pull request.
