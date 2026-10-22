@@ -34,8 +34,17 @@ A user-visible change gets a line under «Unreleased» in `CHANGELOG.md`.
 ## Plan version
 <!-- plan-version, while choosing scope: release size, themes, groups -->
 
-## Close version
-<!-- close-version, before the release commit: version bump, changelog, steps after the commit -->
+## Release
+<!-- release, before the gate: checks, version bump, changelog, steps after the commit -->
 `CHANGELOG.md`: add `## X.Y.Z — YYYY-MM-DD` right under «Unreleased», which stays empty. Set the version in
 `.claude-plugin/plugin.json`, `package.json` and `package-lock.json` (`npm version X.Y.Z --no-git-tag-version`).
-Commit message: `chore: release X.Y.Z`. No tag.
+Commit message: `chore: release X.Y.Z`.
+
+## Release notes
+<!-- release, while writing the GitHub Release notes: format, sections, links -->
+
+## Ship
+<!-- release, after the tag and the draft: push, deploy trigger -->
+
+## After release
+<!-- release, once the release is out: deploy checks, notes to prune, announcements -->

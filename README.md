@@ -2,10 +2,10 @@
 
 A Claude Code plugin that runs a project's task tracker in GitHub Issues:
 triage incoming issues → plan a release as a milestone → take the next task through to a commit → close it →
-close the release.
+release the milestone.
 
 Skills: `/gh-tasks:setup`, `/gh-tasks:triage`, `/gh-tasks:plan-version`, `/gh-tasks:next-task`, `/gh-tasks:commit`,
-`/gh-tasks:close-version`.
+`/gh-tasks:release`.
 
 Released versions and their changes: [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -75,13 +75,17 @@ Claude Code to apply it. An update arrives only when the release's `version` is 
    - Checks still failing after 3 fix attempts → it stops and leaves the change uncommitted.
 5. **`/gh-tasks:commit [#N]`** — commits the current change in the project's format, staging the task's files by
    explicit paths, only after you approve this exact commit. `next-task` commits only through it.
-6. **`/gh-tasks:close-version`** — milestones only, run by you. Closes the open milestone: an issue still in
+6. **`/gh-tasks:release [auto]`** — milestones only, run by you. Releases the open milestone: an issue still in
    progress stops it; each other open issue is removed from the milestone or closed, as you say. It runs the
-   release steps of `rules.md → ## Close version` (version bump, changelog), shows the version, the closed issues,
-   the diff and the commit message, and after your «ok» commits, runs the steps that need the commit (a tag) and
-   closes the milestone. A project whose CI closes milestones does not need it.
+   release steps of `rules.md → ## Release` (checks, version bump, changelog), writes the GitHub Release notes,
+   shows the version, the issues, the diff, the commit message and the notes, and after your «ok» commits, tags
+   (`release.tag`) and creates a draft GitHub Release (`release.githubRelease`). Then the release leaves the
+   machine: the `## Ship` steps do it, or you push the commit and the tag and run `/gh-tasks:release` again. Once
+   the tag is on GitHub it publishes the draft and closes the milestone — unless `publishedBy` is `ci`, then your
+   CI does both. Last, the `## After release` steps and the open «After release» checklists of the release's
+   issues. `auto` skips the gate; questions only you can answer are still asked.
 
-No skill pushes, pulls or fetches: the remote is yours.
+The plugin's own commands never push, pull or fetch: the remote is yours, or the `## Ship` steps you write.
 
 ## Configuration
 
@@ -96,6 +100,9 @@ No skill pushes, pulls or fetches: the remote is yours.
 | `checks` | commands run before a change is shown, e.g. `["npm run lint", "npm test"]` | `[]` |
 | `commit` | `format`, `example`, `types` and `trailers` of commit messages | `type(scope): subject`, no trailers |
 | `issueTemplate.extraLines` | extra lines of the issue body template, e.g. «Who is affected» | `[]` |
+| `release.tag` | the release tag, `{version}` being `X.Y.Z`; `false` — no tag | `v{version}` |
+| `release.githubRelease` | draft a GitHub Release with notes and publish it once the tag is on GitHub | `false` |
+| `release.publishedBy` | `skill`, or `ci` when the project's CI publishes the release and closes the milestone | `skill` |
 
 `.claude/gh-tasks/config.local.json` is per user and git-ignored: `{ "account": "<login>" }` is the gh account the
 plugin acts as in this project. Every GitHub call of the plugin goes through `scripts/gh.mjs`, which runs `gh` with
@@ -105,7 +112,7 @@ different projects do not get in each other's way. No file or no `account` → t
 
 `.claude/gh-tasks/rules.md` holds what a field cannot express: prose rules under fixed headings (`## Pick`,
 `## Plan`, `## Implement`, `## Verify`, `## Commit`, `## After commit`, `## Close`, `## Triage`,
-`## Plan version`, `## Close version`), each read by a skill at a fixed moment, in any language. An empty heading is skipped. The
+`## Plan version`, `## Release`, `## Release notes`, `## Ship`, `## After release`), each read by a skill at a fixed moment, in any language. An empty heading is skipped. The
 contract and an example for each heading: [`docs/extension-points.md`](docs/extension-points.md).
 
 ## Permissions
@@ -113,15 +120,17 @@ contract and an example for each heading: [`docs/extension-points.md`](docs/exte
 `setup` adds to the project `.claude/settings.json` (the `PowerShell(...)` twins only on Windows):
 
 - **allow** — `gh issue *`, `gh label *`, `gh search issues *` and the plugin scripts `config.mjs`, `labels.mjs`,
-  `milestone.mjs`, `gh.mjs`, so the cycle runs without a prompt on every call;
+  `milestone.mjs`, `release.mjs`, `gh.mjs`, so the cycle runs without a prompt on every call;
 - **deny** — `gh api *`, `gh repo *`, `gh pr *`, `gh workflow *`, `gh secret *`, `gh variable *`, `gh auth *`.
 
 `gh api` is denied because its token can do anything and a permission rule cannot narrow it to one endpoint.
-Milestones go through `scripts/milestone.mjs` instead, which only reaches `repos/<repo>/milestones`. `gh.mjs` runs
+Milestones go through `scripts/milestone.mjs` instead, which only reaches `repos/<repo>/milestones`, and releases
+through `scripts/release.mjs`, which only reaches `repos/<repo>/releases` and reads the tag refs; it publishes a
+draft only when its tag is on GitHub and is the local one. `gh.mjs` runs
 only `gh issue` (except `delete` and `transfer`), `gh label` (except `delete`: labels are deleted only by
 `labels.mjs apply --delete`) and `gh search issues`.
 
-Commands your `rules.md` steps run (`npm version`, `git tag`, …) would ask for permission on every call. `setup`
+Commands your `rules.md` steps run (`npm version`, a ship script, …) would ask for permission on every call. `setup`
 lists an allow rule for each one and adds the ones you confirm; `setup auto` only lists them.
 
 ## Development

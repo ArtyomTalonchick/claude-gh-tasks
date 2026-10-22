@@ -4,8 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
-    DEFAULTS, getConfigPath, getLocalConfigPath, isLogin, loadConfig, loadLocalConfig, parseRepoFromRemote, resolveRepo,
-    validateConfig, validateLocalConfig,
+    DEFAULTS, getConfigPath, getLocalConfigPath, isLogin, isTagTemplate, loadConfig, loadLocalConfig,
+    parseRepoFromRemote, resolveRepo, validateConfig, validateLocalConfig,
 } from "../config.mjs";
 
 describe("validateConfig", () => {
@@ -35,6 +35,7 @@ describe("validateConfig", () => {
             checks: ["npm run lint", "npm test"],
             commit: { format: "type (scope): subject", example: "fix (cart): x", types: ["fix"], trailers: false },
             issueTemplate: { extraLines: ["**Who is affected:** <customers | staff>"] },
+            release: { tag: "release-{version}", githubRelease: true, publishedBy: "ci" },
         };
         const { config, errors, warnings } = validateConfig(raw);
         assert.deepEqual(config, raw);
@@ -61,6 +62,11 @@ describe("validateConfig", () => {
         [{ commit: { types: [] } }, "\"commit.types\" must be"],
         [{ commit: { trailers: "no" } }, "\"commit.trailers\" must be"],
         [{ issueTemplate: { extraLines: [1] } }, "\"issueTemplate.extraLines\" must be"],
+        [{ release: { tag: "v1.0.0" } }, "\"release.tag\" must be"],
+        [{ release: { tag: true } }, "\"release.tag\" must be"],
+        [{ release: { githubRelease: "yes" } }, "\"release.githubRelease\" must be"],
+        [{ release: { publishedBy: "user" } }, "\"release.publishedBy\" must be"],
+        [{ release: { tag: false, githubRelease: true } }, "\"release.githubRelease\" needs a tag"],
     ].forEach(([raw, message], i) => {
         test(`${i + 5}. error: ${JSON.stringify(raw)}`, () => {
             const { errors } = validateConfig(raw);
@@ -69,7 +75,7 @@ describe("validateConfig", () => {
         });
     });
 
-    test("23. unknown fields → warnings at every level, dropped from the config", () => {
+    test("28. unknown fields → warnings at every level, dropped from the config", () => {
         const { config, errors, warnings } = validateConfig({ extra: 1, commit: { style: "x" } });
         assert.deepEqual(errors, []);
         assert.deepEqual(warnings, [
@@ -79,22 +85,49 @@ describe("validateConfig", () => {
         assert.deepEqual(config, DEFAULTS);
     });
 
-    test("24. version.command with scheme patch → warning, dropped", () => {
+    test("29. version.command with scheme patch → warning, dropped", () => {
         const { config, errors, warnings } = validateConfig({ version: { command: "node next.mjs" } });
         assert.deepEqual(errors, []);
         assert.equal(warnings.length, 1);
         assert.deepEqual(config.version, { scheme: "patch" });
     });
 
-    test("25. an invalid field falls back to its default", () => {
+    test("30. an invalid field falls back to its default", () => {
         assert.equal(validateConfig({ milestones: "yes" }).config.milestones, true);
     });
 
-    test("26. scheme minor is valid; version.command with it → warning, dropped", () => {
+    test("31. scheme minor is valid; version.command with it → warning, dropped", () => {
         const { config, errors, warnings } = validateConfig({ version: { scheme: "minor", command: "node next.mjs" } });
         assert.deepEqual(errors, []);
         assert.deepEqual(warnings, ["\"version.command\" is ignored with \"version.scheme\": \"minor\""]);
         assert.deepEqual(config.version, { scheme: "minor" });
+    });
+
+    test("32. release without a tag is valid while there is no GitHub Release", () => {
+        const { config, errors } = validateConfig({ release: { tag: false } });
+        assert.deepEqual(errors, []);
+        assert.deepEqual(config.release, { ...DEFAULTS.release, tag: false });
+    });
+});
+
+describe("isTagTemplate", () => {
+    [
+        ["v{version}", true],
+        ["{version}", true],
+        ["release-{version}", true],
+        ["v{version}-final", true],
+        [false, true],
+        ["v1.2.3", false],
+        ["v{version}{version}", false],
+        ["releases/{version}", false],
+        ["v {version}", false],
+        ["", false],
+        [true, false],
+        [undefined, false],
+    ].forEach(([value, expected], i) => {
+        test(`${i + 1}. ${JSON.stringify(value)} → ${expected}`, () => {
+            assert.equal(isTagTemplate(value), expected);
+        });
     });
 });
 

@@ -1,9 +1,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-    buildApiArgs, compareVersions, findMilestone, findSameVersion, formatLocalTime, getDueOn, getLatestVersion,
-    getMilestonePath, getMilestoneStatus, getNextMinor, getNextPatch, getOpenMilestones, isMilestoneTitle,
-    parseVersion, parseVersionOutput, splitCommand,
+    buildApiArgs, compareVersions, findMilestone, findSameVersion, formatIssue, formatLocalTime, getDueOn,
+    getLatestVersion, getMilestonePath, getMilestoneStatus, getNextMinor, getNextPatch, getOpenMilestones,
+    isMilestoneTitle, parseVersion, parseVersionOutput, splitCommand,
 } from "../milestoneCore.mjs";
 
 const REPO = "owner/name";
@@ -244,5 +244,25 @@ describe("getMilestoneStatus", () => {
             getMilestoneStatus({ state: "closed", closed_at: closedAt, open_issues: 0, closed_issues: 5 }),
             `closed — released ${formatLocalTime(closedAt)}`,
         );
+    });
+});
+
+describe("formatIssue", () => {
+    const issue = { number: 7, title: "Fix the cart", state: "OPEN", labels: [{ name: "type:bug" }, { name: "size:s" }] };
+
+    test("1. open, with labels", () => {
+        assert.equal(formatIssue(issue), "  #7 [open] Fix the cart :: type:bug, size:s");
+    });
+
+    test("2. closed as completed, or without a reason → closed", () => {
+        assert.equal(formatIssue({ ...issue, state: "CLOSED", stateReason: "COMPLETED", labels: [] }), "  #7 [closed] Fix the cart");
+        assert.equal(formatIssue({ ...issue, state: "CLOSED", labels: [] }), "  #7 [closed] Fix the cart");
+    });
+
+    test("3. closed otherwise → says why", () => {
+        assert.equal(formatIssue({ ...issue, state: "CLOSED", stateReason: "NOT_PLANNED", labels: [] }),
+            "  #7 [closed: not planned] Fix the cart");
+        assert.equal(formatIssue({ ...issue, state: "CLOSED", stateReason: "DUPLICATE", labels: [] }),
+            "  #7 [closed: duplicate] Fix the cart");
     });
 });

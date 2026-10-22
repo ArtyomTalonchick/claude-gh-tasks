@@ -12,7 +12,7 @@ adds missing headings.
 - An empty or missing heading is skipped silently. A heading that is not in this list is never read.
 - The HTML comment under each heading is a hint for the author, not a rule; skills ignore it.
 - Machine-readable settings live in `config.json` (checks, commit format, language, version scheme, issue template
-  lines). Do not repeat them here; this file is for what a field cannot express.
+  lines, release tag and GitHub Release). Do not repeat them here; this file is for what a field cannot express.
 
 | Heading | Read by | When |
 |---|---|---|
@@ -25,7 +25,10 @@ adds missing headings.
 | `## Close` | next-task | after closing the issue |
 | `## Triage` | triage | while rewriting an issue body |
 | `## Plan version` | plan-version | while choosing the scope of a release |
-| `## Close version` | close-version | before the release commit |
+| `## Release` | release | before the release gate |
+| `## Release notes` | release | while writing the GitHub Release notes |
+| `## Ship` | release | after the tag and the draft |
+| `## After release` | release | once the release is out |
 
 ## Headings
 
@@ -125,21 +128,55 @@ How big a release is and how it is shaped: size reference, themes, special group
 > A release is about a week of work: two or three `size:m` tasks plus small ones. Tasks that wait for the owner's
 > content go to «Waits for the user».
 
-### Close version
+### Release
 
-`<!-- close-version, before the release commit: version bump, changelog, steps after the commit -->`
+`<!-- release, before the gate: checks, version bump, changelog, steps after the commit -->`
 
-What a release changes in the repository and what follows the release commit. Steps that change files run before
-the gate and go into one release commit; steps that need the commit, such as a tag, run after it. No steps that
-change files → the milestone is closed without a commit. A project whose CI closes milestones does not run
-`close-version` and leaves this heading empty.
+What a release checks and changes in the repository. Checks run first and a failed one stops the release. Steps that
+change files run before the gate and go into one release commit; steps that need the commit run after it. No steps
+that change files → no release commit. The tag is not a step: `release.tag` in the config makes it. A rule here
+may also replace a default of the skill, such as what happens to the issues left open in the milestone.
 
 > `CHANGELOG.md`: add `## X.Y.Z — YYYY-MM-DD` right under «Unreleased», which stays empty. Run
-> `npm version X.Y.Z --no-git-tag-version`. Commit message: `chore: release X.Y.Z`. After the commit:
-> `git tag vX.Y.Z`.
+> `npm version X.Y.Z --no-git-tag-version`. Commit message: `chore: release X.Y.Z`.
 
-> Set the version: `npm version X.Y.0 --no-git-tag-version`. After the commit: `git tag vX.Y.0`. (`minor` version
-> scheme)
+> Set the version: `npm version X.Y.0 --no-git-tag-version`. (`minor` version scheme)
+
+> Run `node tools/release/check-env.mjs`: a variable missing in the deploy workflow stops the release. Open issues
+> stay in the milestone; list them in the report.
+
+### Release notes
+
+`<!-- release, while writing the GitHub Release notes: format, sections, links -->`
+
+The format of the notes when `release.githubRelease` is on. Without it the notes are one sentence and the issues
+of the release grouped by type.
+
+> First a sentence on what the release brings, then «⚠️ What to do» for the staff when they must act, then sections
+> in this order: Catalog, Orders, Admin, Internal tools. A line is the result for the user, ending with `(#N)`. Last
+> line: `Changes - https://github.com/<repo>/compare/<previous tag>...<tag>`.
+
+### Ship
+
+`<!-- release, after the tag and the draft: push, deploy trigger -->`
+
+How the release leaves the machine. The plugin never pushes: without this heading the user pushes the release
+commit and the tag, then runs `/gh-tasks:release` again, which publishes the draft once the tag is on GitHub.
+
+> Run `node tools/release/ship.mjs --tag <tag>`: it pushes `main` and the tag over HTTPS, and the tag push starts the
+> deploy.
+
+### After release
+
+`<!-- release, once the release is out: deploy checks, notes to prune, announcements -->`
+
+What follows the release: with `publishedBy: "skill"` after the release is published and the milestone closed,
+with `publishedBy: "ci"` after the ship steps. The skill also lists the open «After release» checklists of the
+release's issues by itself.
+
+> Wait until the release is published (the CI does it after the deploy), then check the production site for each
+> issue of the release and tick its «After release» items. Remove the release's sections from
+> `.claude/local/tasks.md`.
 
 ## Writing good rules
 

@@ -62,11 +62,20 @@ the current value), so the user can reply «ok» or change single items:
   first stdout line. The command runs without a shell from the project root; on Windows it must start with an
   executable such as `node`, not `npm run`. Milestone titles are `vX.Y.Z` or `vX.Y` (= `vX.Y.0`). Propose `minor` when
   `package.json` has a `version` or `git tag --list "v*.*.0"` shows release tags, else `patch`.
-  With `minor`, the manifest version and the tag are project steps, proposed with the question and written to
-  `rules.md` in step 5: under `## Commit` «Bump the patch: `npm version patch --no-git-tag-version`; its files go
-  into the commit», under `## Close version` «Set the version: `npm version X.Y.0 --no-git-tag-version`. After the
-  commit: `git tag vX.Y.0`». No `package.json` → the same steps without a command; the user names it or drops
-  the step. A heading that already holds a version step keeps it and gets nothing.
+  With `minor`, the manifest version is a project step, proposed with the question and written to `rules.md` in
+  step 5: under `## Commit` «Bump the patch: `npm version patch --no-git-tag-version`; its files go into the
+  commit», under `## Release` «Set the version: `npm version X.Y.0 --no-git-tag-version`». No `package.json` → the
+  same steps without a command; the user names it or drops the step. A heading that already holds a version step
+  keeps it and gets nothing.
+- **Release** (only with milestones) — what `/gh-tasks:release` makes besides closing the milestone:
+  - `tag` — the release tag, `{version}` being `X.Y.Z`: propose `v{version}` when `git tag --list "v*"` shows
+    tags or the scheme is `minor`, else `false` (no tag);
+  - `githubRelease` — draft a GitHub Release with notes and publish it once the tag is on GitHub; needs a tag.
+    Propose `true` with a tag;
+  - `publishedBy` — `skill` (default), or `ci` when the project's CI publishes the release and closes the
+    milestone.
+
+  The plugin never pushes: the user pushes the tag, or a `## Ship` step of `rules.md` does.
 - **Language** of issues, milestones and comments — propose the language of recent issues and commits.
 - **Checks** — commands run before showing a change; propose them from `package.json` scripts (lint, type check,
   test). None found → propose an empty list; never invent commands. Run each proposed check once in the project
@@ -103,10 +112,12 @@ the existing entry that precedes it in the block; none exists → at the end of 
     "allow": [
       "Bash(gh issue *)", "Bash(gh label *)", "Bash(gh search issues *)",
       "Bash(node *gh-tasks*/scripts/config.mjs*)", "Bash(node *gh-tasks*/scripts/labels.mjs*)",
-      "Bash(node *gh-tasks*/scripts/milestone.mjs*)", "Bash(node *gh-tasks*/scripts/gh.mjs*)",
+      "Bash(node *gh-tasks*/scripts/milestone.mjs*)", "Bash(node *gh-tasks*/scripts/release.mjs*)",
+      "Bash(node *gh-tasks*/scripts/gh.mjs*)",
       "PowerShell(gh issue *)", "PowerShell(gh label *)", "PowerShell(gh search issues *)",
       "PowerShell(node *gh-tasks*/scripts/config.mjs*)", "PowerShell(node *gh-tasks*/scripts/labels.mjs*)",
-      "PowerShell(node *gh-tasks*/scripts/milestone.mjs*)", "PowerShell(node *gh-tasks*/scripts/gh.mjs*)"
+      "PowerShell(node *gh-tasks*/scripts/milestone.mjs*)", "PowerShell(node *gh-tasks*/scripts/release.mjs*)",
+      "PowerShell(node *gh-tasks*/scripts/gh.mjs*)"
     ],
     "deny": [
       "Bash(gh api *)", "Bash(gh repo *)", "Bash(gh pr *)", "Bash(gh workflow *)",
@@ -120,15 +131,16 @@ the existing entry that precedes it in the block; none exists → at the end of 
 
 The `PowerShell(...)` entries are for Windows; on other systems offer only the `Bash(...)` ones. Explain the deny
 of `gh api` in one line: its token can do anything and a rule cannot narrow it; milestones go through
-`milestone.mjs`, which only reaches `repos/<repo>/milestones`. `gh.mjs` runs only `gh issue`, `gh label` and
+`milestone.mjs`, which only reaches `repos/<repo>/milestones`, and releases through `release.mjs`, which only
+reads and writes `repos/<repo>/releases` and reads the tag refs. `gh.mjs` runs only `gh issue`, `gh label` and
 `gh search issues`, as the configured account, so allowing it opens nothing the deny list closes.
 
 Also check that `enabledPlugins` in the same file contains `"gh-tasks@gh-tasks": true`; if the plugin was installed
 in another scope, offer to add it so the project carries the plugin for everyone who clones it.
 
 **Rule commands.** The steps under the headings of `rules.md` (the existing file plus the steps of a project commit
-skill being absorbed, and the version steps of a `minor` scheme) may run shell commands — `npm version patch`, `git tag v1.2.3`, the release steps under
-`## Close version` — and every such call asks for permission. List one rule per command and subcommand, `Bash(npm version *)`, `Bash(git tag *)` (and the
+skill being absorbed, and the version steps of a `minor` scheme) may run shell commands — `npm version patch`, the release steps under
+`## Release`, `## Ship` and `## After release` — and every such call asks for permission. List one rule per command and subcommand, `Bash(npm version *)`, `Bash(git tag *)` (and the
 `PowerShell(...)` twins on Windows), each with the heading it comes from. Leave out a command already allowed, one
 the deny list above matches, and one that reaches the git remote (`git push`, `fetch`, `pull`). The user confirms
 the list or drops items; the rest is merged into `allow` by the same rules as the block above. No commands → say
@@ -154,7 +166,7 @@ and conflicts go to the report.
 ## 5. Project files
 
 1. **`.claude/gh-tasks/config.json`** — write every field the user answered in step 2 explicitly (`language`,
-   `milestones`, `version`, `checks`, `commit`), so the file documents the project's choices; add `repo` only if
+   `milestones`, `version`, `checks`, `commit`, and `release` with milestones), so the file documents the project's choices; add `repo` only if
    it differs from `origin` and `issueTemplate` only with extra lines. Plain JSON, two-space indent. In update
    mode keep fields the questions did not touch.
 2. **`.claude/gh-tasks/config.local.json`** — only when the Account question was asked: `{ "account": "<login>" }`,
@@ -196,11 +208,23 @@ and conflicts go to the report.
    ## Plan version
    <!-- plan-version, while choosing scope: release size, themes, groups -->
 
-   ## Close version
-   <!-- close-version, before the release commit: version bump, changelog, steps after the commit -->
+   ## Release
+   <!-- release, before the gate: checks, version bump, changelog, steps after the commit -->
+
+   ## Release notes
+   <!-- release, while writing the GitHub Release notes: format, sections, links -->
+
+   ## Ship
+   <!-- release, after the tag and the draft: push, deploy trigger -->
+
+   ## After release
+   <!-- release, once the release is out: deploy checks, notes to prune, announcements -->
    ```
 
-   In update mode with an existing file: add any missing headings at the end, leave the rest untouched.
+   In update mode with an existing file: add any missing headings at the end, leave the rest untouched. A
+   `## Close version` heading (gh-tasks 1.x) is renamed `## Release` in place, its content kept and its hint replaced; the new
+   release headings go right after it. A step that creates the release tag (`git tag …` under `## Commit` or
+   `## Release`) duplicates `release.tag`: show it and propose to remove it; `auto` only lists it in the report.
    The version steps of a `minor` scheme the user accepted in step 2: append each under its heading.
    An absorbed commit skill: append its non-format steps under `## Commit`, after what is already there. Delete
    the skill only after `config.json` and `rules.md` hold what it held.

@@ -94,6 +94,19 @@ export const formatLocalTime = (iso) => {
         + `${sign}${pad(Math.floor(Math.abs(offset) / 60))}:${pad(Math.abs(offset) % 60)}`;
 };
 
+// gh stateReason of a closed issue: COMPLETED (or empty on old issues), NOT_PLANNED, DUPLICATE
+const getIssueState = (issue) => {
+    if (issue.state === "OPEN") return "open";
+    const reason = (issue.stateReason ?? "").toLowerCase().replaceAll("_", " ");
+    return !reason || reason === "completed" ? "closed" : `closed: ${reason}`;
+};
+
+/** One issue line of `show`: number, state (a closed issue not completed says why), title and labels */
+export const formatIssue = (issue) => {
+    const labels = issue.labels.map((label) => label.name).join(", ");
+    return `  #${issue.number} [${getIssueState(issue)}] ${issue.title}${labels ? ` :: ${labels}` : ""}`;
+};
+
 export const getMilestoneStatus = (milestone) => {
     if (milestone.state !== "open") return `closed — released ${formatLocalTime(milestone.closed_at)}`;
     if (milestone.open_issues > 0) return "open — in progress";

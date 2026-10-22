@@ -11,8 +11,9 @@ the document does not cover: ask the user, then write the answer into the docume
 ## Layout
 
 - `.claude-plugin/` — `plugin.json` (name, version) and `marketplace.json`.
-- `skills/<name>/SKILL.md` — `setup`, `triage`, `plan-version`, `next-task`, `commit`, `close-version`.
-- `scripts/` — `config.mjs`, `labels.mjs`, `milestone.mjs` + `milestoneCore.mjs`, `gh.mjs`, `cli.mjs`; tests in `scripts/test/`.
+- `skills/<name>/SKILL.md` — `setup`, `triage`, `plan-version`, `next-task`, `commit`, `release`.
+- `scripts/` — `config.mjs`, `labels.mjs`, `milestone.mjs` + `milestoneCore.mjs`, `release.mjs` + `releaseCore.mjs`,
+  `gh.mjs`, `cli.mjs`; tests in `scripts/test/`.
 - `docs/` — `requirements.md`, `extension-points.md`.
 - `.claude/gh-tasks/` — this repository's own tracker config (dogfooding).
 
@@ -33,7 +34,7 @@ claude plugin validate .
 - Plan first; write code only after the user approves the plan.
 - Commits: one line, conventional commits (`chore|feat|fix|docs|test: subject`), no trailers, no AI mentions.
 - Never touch the git remote (no push / fetch / pull); the user does that. `gh issue` and `gh label` are fine;
-  `gh api` only through `scripts/milestone.mjs`.
+  `gh api` only through `scripts/milestone.mjs` and `scripts/release.mjs`.
 - Code: Node 20+, ESM `.mjs`, `node:util parseArgs`, `execFileSync` with an argument array (never a shell
   string), `node --test`, ESLint clean. Pure functions are exported and tested; the CLI runs only when the file
   is executed directly.

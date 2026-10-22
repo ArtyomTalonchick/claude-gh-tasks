@@ -13,16 +13,17 @@ file keeps the decisions and their reasons.
 
 **In v1**
 
-- Skills: `setup`, `triage`, `plan-version`, `next-task`, `commit`, `close-version`.
-- Scripts: `labels.mjs`, `milestone.mjs` (+ `milestoneCore.mjs`), `config.mjs`, `gh.mjs`, `cli.mjs`.
+- Skills: `setup`, `triage`, `plan-version`, `next-task`, `commit`, `release` (`close-version` until 2.0, Q47).
+- Scripts: `labels.mjs`, `milestone.mjs` (+ `milestoneCore.mjs`), `release.mjs` (+ `releaseCore.mjs`), `config.mjs`,
+  `gh.mjs`, `cli.mjs`.
 - Project files: `.claude/gh-tasks/config.json`, `.claude/gh-tasks/rules.md`, the git-ignored
   `.claude/gh-tasks/config.local.json`.
 - Docs: `README.md`, `docs/requirements.md`, `docs/extension-points.md`, `CHANGELOG.md`.
 
 **Out of v1** (later plugins or later versions)
 
-- `release` (push, GitHub Release, deploy verification, release notifications) — bound to the prosportcards CI.
-  Closing the milestone itself is `close-version` (Q47).
+- Push, deploy verification and release notifications as plugin code: they are project steps under `## Ship` and
+  `## After release` of the `release` skill (Q47).
 - Worktree slots (`task/N` lock branches, merge into `main`, `SessionStart` sync hook).
 - Telegram: issue intake from a bot, `tg-issue` markers, release notifications.
 - Hooks of any kind.
@@ -38,7 +39,7 @@ file keeps the decisions and their reasons.
 | Q3 | Audience | One user today, designed so anyone can install it: no absolute paths, secrets or personal settings inside; `gh` permissions live in settings, not in the plugin |
 | Q4 | v1 scope | See section 1 |
 | Q5 | Milestones | Optional per project (`milestones: true/false`); without them `next-task` orders by labels and `plan-version` is unavailable |
-| Q6 | Milestone version scheme | Chosen at setup: `patch` (default), `minor`, or a project `command` that prints the next version (prosportcards seasons). `minor` is proposed when `package.json` has a `version` or `vX.Y.0` tags exist. The manifest bump (a patch per commit, `X.Y.0` at release) and the tag are not plugin code: with `minor`, `setup` proposes them as `## Commit` / `## Close version` steps of `rules.md`, with their permissions (Q45) |
+| Q6 | Milestone version scheme | Chosen at setup: `patch` (default), `minor`, or a project `command` that prints the next version (prosportcards seasons). `minor` is proposed when `package.json` has a `version` or `vX.Y.0` tags exist. The manifest bump (a patch per commit, `X.Y.0` at release) is not plugin code: with `minor`, `setup` proposes it as `## Commit` / `## Release` steps of `rules.md`, with their permissions (Q45). The tag is `release.tag` (Q47) |
 | Q7 | Language | Plugin, skills and docs in English. Working language of issues, milestone text and chat is configurable per project, any language |
 | Q8 | Commit format | Default conventional commits `type(scope): subject`; `setup` studies `git log` and proposes the project's own convention, possibly improved |
 | Q9 | Project customisation | JSON config for machine-readable fields + a prose Markdown addendum read at fixed extension points |
@@ -51,13 +52,13 @@ file keeps the decisions and their reasons.
 | Q16 | License | Public repository, MIT |
 | Q17 | Project files | `.claude/gh-tasks/config.json` and `.claude/gh-tasks/rules.md`; the schema is shipped in `scripts/config.mjs` and validated at the start of every skill |
 | Q18 | Config fields | Section 6 |
-| Q19 | Extension points | Ten fixed headings in `rules.md` (section 7). A missing heading is an empty point, skipped silently |
+| Q19 | Extension points | Thirteen fixed headings in `rules.md` (section 7). A missing heading is an empty point, skipped silently |
 | Q20 | Language of artefacts | Everything in GitHub is in the project language; machine-relevant places are marked with language-independent HTML comments `<!-- gh-tasks:… -->`; foreign HTML comments (e.g. `tg-issue`) are preserved untouched |
 | Q21 | Triage | Separate skill `triage`; `plan-version` calls it for untriaged candidates, `next-task #N` for an untriaged task taken by number |
 | Q22 | Flags | `next-task` takes `plan`, `auto` and `loop` (next task after closing) in v1; the gates they set are Q40 |
 | Q23 | Issue body template | What / Where / Done when / Notes / Original message. Project-specific required lines (prosportcards «Who is affected») via `issueTemplate.extraLines` |
 | Q24 | Labels | Fixed set `status:* / type:* / prio:* / size:*`, same colours as prosportcards; descriptions in English, fixed in `labels.mjs` (labels are tooling metadata; only issues, milestones and chat follow the project language). `setup` never deletes foreign labels on its own: creates/updates ours, proposes renames, lists extras and asks which to delete; deletion only on the user's explicit word |
-| Q25 | Commit trailers | `commit.trailers: false` by default (one line, no trailers, no AI mentions). The approval gate is not configurable; only `next-task auto` runs without it (Q40) |
+| Q25 | Commit trailers | `commit.trailers: false` by default (one line, no trailers, no AI mentions). The approval gate is not configurable; only `next-task auto` (Q40) and `release auto` (Q47) run without it |
 | Q26 | `setup` | Section 9 |
 | Q27 | Hooks | None in v1; the config check is the first step of every skill |
 | Q28 | Documents | This file, `README.md`, `docs/extension-points.md`; chat summaries may be in any language |
@@ -67,11 +68,11 @@ file keeps the decisions and their reasons.
 | Q32 | Install scope | Project scope (`enabledPlugins` in the project `.claude/settings.json`, committed). Not user scope: that would inject `/next-task` into projects with their own, e.g. prosportcards |
 | Q33 | Label renames: propose or apply | Both: `setup` runs `labels.mjs apply --dry-run`, shows the plan (renames, conflicts, creates, updates, foreign labels), and runs `apply` after the user's «yes» |
 | Q34 | Rename map and foreign labels | Map: `inbox`, `in-progress`, `bug`, `feature`, `wish`, `ops` → their prefixed names; `p1/p2/p3` → `prio:critical/normal/minor`; `size-s/m/l` → `size:s/m/l`. GitHub's `enhancement` is not renamed (broader meaning) and stays foreign. `setup` lists all foreign labels (GitHub defaults included) and asks: delete all, some or none — deleting a label removes it from its issues |
-| Q35 | Milestone title | `vX.Y.Z` or `vX.Y`, accepted with any version scheme; `vX.Y` is version `X.Y.0`. `next-version` titles a `patch` release `vX.Y.Z` and a `minor` release `vX.Y`. One version has one milestone: `create` refuses `v1.2.0` when `v1.2` exists, and the other way round; `show`, `describe` and `close` match the exact title. The release tag and the manifest version are always `X.Y.Z`. The first stdout line of `version.command` is checked against the same pattern |
+| Q35 | Milestone title | `vX.Y.Z` or `vX.Y`, accepted with any version scheme; `vX.Y` is version `X.Y.0`. `next-version` titles a `patch` release `vX.Y.Z` and a `minor` release `vX.Y`. One version has one milestone: `create` refuses `v1.2.0` when `v1.2` exists, and the other way round; `show`, `describe` and `close` match the exact title. The manifest version is always `X.Y.Z`, and so is `{version}` in `release.tag`. The first stdout line of `version.command` is checked against the same pattern |
 | Q36 | Running `version.command` | Without a shell: split into arguments (simple quotes supported), `execFileSync` in the project root. On Windows the command starts with an executable (`node …`): `npm run …` needs a shell and is not run |
 | Q37 | One open milestone | Enforced by `milestone.mjs create` itself (refuses while another milestone is open), not only by `plan-version` |
 | Q38 | Triage gate | `triage` shows all proposed outcomes in one table and writes to GitHub only after «ok»; under `plan-version` the table is part of its gate. `triage auto` writes triaged issues without the gate (`next-task auto` calls it this way), but closing an issue always needs the user's confirmation |
-| Q39 | `auto` across skills | `setup`, `triage`, `plan-version` and `next-task` take `auto`: it skips the confirmation gates but never deletes or closes, never invents what only the user knows, never touches the remote; `next-task auto` closes only the issue it has just committed. `setup auto`: proposed values, labels and permissions applied, foreign labels and rule-command permissions (Q45) only listed. `plan-version auto`: milestone written and issues assigned without the gate, version from `next-version` (no version yet → still asks), untriaged candidates through `triage auto`, the report shows every choice. `next-task auto`: Q40. `commit` has no `auto`: its gate stays (Q25), `next-task auto` is the only exception |
+| Q39 | `auto` across skills | `setup`, `triage`, `plan-version` and `next-task` take `auto`: it skips the confirmation gates but never deletes or closes, never invents what only the user knows, never touches the remote; `next-task auto` closes only the issue it has just committed. `setup auto`: proposed values, labels and permissions applied, foreign labels and rule-command permissions (Q45) only listed. `plan-version auto`: milestone written and issues assigned without the gate, version from `next-version` (no version yet → still asks), untriaged candidates through `triage auto`, the report shows every choice. `next-task auto`: Q40. `release auto`: no gate; open issues of the milestone are still settled on the user's word, and the plugin's own commands still never push (Q47). `commit` has no `auto`: its gate stays (Q25), `next-task auto` and `release auto` are the only exceptions |
 | Q40 | `next-task` gates | Three levels. Default: the plan is shown only when there are questions, the final diff always waits for «ok». `plan`: the plan always waits for «ok». `auto`: no gates, commits without approval. `plan auto`: plan gate, then no diff gate. `auto` refuses to run without `checks`, stops on a dirty tree or a stuck `status:in-progress`, skips tasks with open questions and `type:ops` tasks, writes new questions into the issue instead of asking (an issue given as `#N` is taken anyway and its questions are asked in chat), commits only with green checks, and ends with a report of every commit and every closed or skipped issue. A project that always wants the plan gate says so under `## Plan` |
 | Q41 | Failing checks and stopping `loop` | Checks still failing after 3 fix attempts → stop and show the failure, the task stays `status:in-progress`, `loop` ends: the uncommitted change blocks the next task. «ok, stop» on the shown diff commits, closes and ends `loop`; `loop` also ends when no task is left |
 | Q42 | gh account | Per project, per user: `account` (a GitHub login) in the git-ignored `.claude/gh-tasks/config.local.json`, asked by `setup` when gh has more than one login. Not in `config.json`: collaborators use different accounts. Every GitHub call of the plugin goes through `scripts/gh.mjs`, which runs `gh` with `GH_TOKEN` read from the gh keyring (`gh auth token --user <login>`) for its own process only. `gh auth switch` is not used: the active account is global and would race between parallel sessions; stopping on a wrong active account is rejected for the same reason. `gh.mjs` allows only `gh issue` (not `delete` / `transfer`), `gh label` (not `delete`: only `labels.mjs apply --delete` deletes labels) and `gh search issues`, because a permission rule matches only the `node …` command line. Every `gh.mjs` call runs against `config.repo`: `--repo` is added unless the call carries `--repo` / `-R`. No `account` → the active account |
@@ -79,8 +80,9 @@ file keeps the decisions and their reasons.
 | Q44 | `setup` step order | Permissions are merged before the labels are applied: `labels.mjs apply` is the first write to GitHub, and under `auto` a call without a permission rule is blocked |
 | Q45 | Permissions for `rules.md` commands | `setup` step 3 lists the shell commands the `rules.md` steps run (an absorbed commit skill's steps included) and proposes one allow rule per command and subcommand (`Bash(npm version *)`, `Bash(git tag *)`), skipping commands already allowed, denied, or reaching the git remote; merged after the user's confirmation by the same rules as the gh-tasks block. `setup auto` only lists them: they are project commands the plugin did not write. The `commit` skill's `allowed-tools` are not widened — the plugin cannot know a project's commands |
 | Q46 | Parallel `next-task` sessions | `## Pick` may change two core steps of `next-task`: which `status:in-progress` issues are this session's (the others belong to parallel sessions and are left out of the unfinished-work check, so `auto` does not stop on them), and how a task is claimed (a lock before the label; a failed lock skips to the next candidate, or stops when the task was given by `#N`). Without such a rule every in-progress issue is this session's and the label is set at once |
-| Q47 | Closing a release | Skill `close-version`: a project without release CI has nothing else that closes the milestone, so the cycle would not end. It closes the open milestone and stops before the remote: no push, no GitHub Release, no deploy — those stay in the project or a later `release` plugin. Requires `milestones: true`; no `auto` (closing needs the user, Q39). Open issues left in the milestone are shown and each is removed from the milestone (back to free, `plan-version` takes it next time) or closed, on the user's word. Release file changes (version bump, changelog) come from a new extension point `## Close version` and are committed through `commit`; steps that need the commit (a tag) run after it. A project whose CI closes milestones (prosportcards) does not run it |
+| Q47 | Releasing a milestone | Skill `release [auto]` (replaces `close-version` in 2.0): one skeleton for projects that push by hand and for projects with release CI (prosportcards), the project's specifics in config and `rules.md`. Flow: state → open issues settled on the user's word (a `## Release` rule may replace this, e.g. «they stay in the milestone») → `## Release` checks and file changes → notes → **gate** (`auto`: none) → release commit through `commit` → tag by `release.tag` (`v{version}` by default, `false` = none) → draft GitHub Release with `release.githubRelease` → `## Ship` steps → publish once the tag is on GitHub and close the milestone, or neither with `release.publishedBy: "ci"` → `## After release` → report with the open after-release checklists. The plugin's own commands never push: without `## Ship` the run stops at «push, then run `release` again», and the next run reads the state (local tag, tag on GitHub, draft, milestone) and goes on — the draft carries the approved notes between runs. Without a tag and without ship steps the milestone is closed in the same run. Requires `milestones: true` |
 | Q48 | Behaviour tests of skills | No `claude plugin eval` suite. Each eval run starts in an empty workspace without the project, its config or a git repository, and with no network. The skills run shell commands (`config.mjs`, `gh.mjs`, `git`) against a real GitHub repository, so a meaningful case needs a fake project and a stand-in for `gh`. Shell tools in eval runs need the OS sandbox, which native Windows lacks (WSL2 only). Skills are checked by live runs on this repository; `claude plugin validate` checks their files |
+| Q49 | GitHub Releases API | Through `scripts/release.mjs` only, the way milestones go through `milestone.mjs` (`gh api` stays denied): `releaseCore` builds `repos/<repo>/releases` (list, create, update) and `repos/<repo>/git/matching-refs/tags/<tag>` (read), no delete. `publish` refuses while the tag is not on GitHub or is not the local tag object: publishing a draft whose tag is missing makes GitHub create the tag on the default branch, possibly on a commit that is not the release. `gh release --generate-notes` is not used: it builds notes from pull requests, and projects that commit to `main` have none |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
 
@@ -114,12 +116,14 @@ claude-gh-tasks/                    repository and folder; the plugin and the ma
     plan-version/SKILL.md  (+ templates/milestone.md)
     next-task/SKILL.md
     commit/SKILL.md
-    close-version/SKILL.md
+    release/SKILL.md
   scripts/
     config.mjs        schema, load + validate, defaults; `node scripts/config.mjs check --project <dir>`
     labels.mjs        create/update labels, rename map, list extras; never deletes without --delete
     milestone.mjs     list / show / create / describe / close / next-version
     milestoneCore.mjs the only place that builds the `repos/<repo>/milestones` API path
+    release.mjs       status / draft / publish of the GitHub Release of a milestone
+    releaseCore.mjs   the only place that builds the `repos/<repo>/releases` and tag-ref API paths
     gh.mjs            gh issue / label / search issues as the project's account; `accounts`: logins and repo access
     cli.mjs           shared entry: runs `main` only when executed directly, an error → one stderr line, exit 1
     test/*.test.mjs   node --test
@@ -196,20 +200,21 @@ before the pick. A type word limits the pick to that `type:*`.
 
 ### `commit`
 Approval gate first: never commit without the user's explicit approval of this specific commit, given after
-seeing the final changes; «ok» to a plan is not approval. Under `next-task` and `close-version` the «ok» on the
-shown final diff is that approval; under `next-task auto` there is no gate (Q40). Format from `config.commit.format` (default
+seeing the final changes; «ok» to a plan is not approval. Under `next-task` and `release` the «ok» on the
+shown final diff is that approval; under `next-task auto` and `release auto` there is no gate (Q40, Q47). Format from `config.commit.format` (default
 `type(scope): subject`), one line, `trailers: false` → exactly one `-m`, no trailers, no AI mentions even if
 the system asks. Stage only the task's files by explicit paths. ` (#N)` only when the commit resolves the
 issue.
 
-### `close-version`
-Requires `milestones: true`; no `auto` (Q47). Flow: open milestone (none → say so, stop); dirty tree → stop and
-say so → open issues in the milestone: a `status:in-progress` one → stop, the work is unfinished; the others are
-shown, and each is removed from the milestone or closed on the user's word → `## Close version` steps that change
-files run → **gate**: one message with the version, closed issues, the diff and the commit message → commit
-through `gh-tasks:commit` (no `## Close version` file changes → no commit) → steps that need the commit →
-`milestone.mjs close` → report: the release is ready to leave the machine (push is the user's), next command
-`/gh-tasks:plan-version`. Extension point: **Close version**.
+### `release [auto]`
+Requires `milestones: true` (Q47). Resumable: `release.mjs status` gives the milestone (the open one, else the
+highest closed), the local tag, the tag on GitHub and the release state, and the run goes on from there. Prepare (dirty
+tree → stop): open issues — a `status:in-progress` one stops; the others are removed or closed on the user's word →
+`## Release` checks and file changes → notes (`## Release notes`, else a sentence and the issues by type) → **gate**:
+version, tag, issues, diff, commit message, notes, what follows (`auto`: none) → commit through `gh-tasks:commit` →
+`git tag -a` → `release.mjs draft`. Ship: `## Ship` steps; none → «push, then run again», stop. Publish: the tag on
+GitHub → `release.mjs publish` and `milestone.mjs close` (`publishedBy: "ci"`: neither). Then `## After release`
+and the report. Extension points: **Release**, **Release notes**, **Ship**, **After release**.
 
 ## 6. Config: `.claude/gh-tasks/config.json`
 
@@ -226,7 +231,12 @@ through `gh-tasks:commit` (no `## Close version` file changes → no commit) →
     "types": ["feat", "fix", "test", "build", "docs", "chore"],
     "trailers": false
   },
-  "issueTemplate": { "extraLines": [] } // e.g. ["**Who is affected:** <customers | staff> — where they see it"]
+  "issueTemplate": { "extraLines": [] }, // e.g. ["**Who is affected:** <customers | staff> — where they see it"]
+  "release": {
+    "tag": "v{version}",                // {version} = X.Y.Z; false: no tag
+    "githubRelease": false,             // true: draft + publish a GitHub Release; needs a tag
+    "publishedBy": "skill"              // "ci": the project's CI publishes the release and closes the milestone
+  }
 }
 ```
 
@@ -257,7 +267,10 @@ language. A missing heading is an empty point. The full contract goes to `docs/e
 | `## Close` | next-task | after closing | `capture-knowledge`, prune `.claude/local/tasks.md`, release-progress line |
 | `## Triage` | triage | while rewriting a body | keep `tg-issue` marker, `💬` comments are the author, «Who is affected» semantics |
 | `## Plan version` | plan-version | while choosing scope | release size reference, season rule, themes, «waits for the owner» group |
-| `## Close version` | close-version | before the release commit | none: CI closes the milestone |
+| `## Release` | release | before the release gate | `release.mjs preflight` (secrets and env), open issues stay in the milestone |
+| `## Release notes` | release | while writing the notes | the sections, «⚠️ What to do», the `Changes` link |
+| `## Ship` | release | after the tag and the draft | `release.mjs ship`: push over HTTPS, the tag push deploys |
+| `## After release` | release | once the release is out | wait for the deploy, production checks, `.claude/local/tasks.md` cleanup |
 
 ## 8. Labels, markers, lifecycle
 
@@ -269,15 +282,15 @@ etc., Q34) is applied only when the target does not exist yet; both existing is 
 
 Lifecycle: `status:inbox` or no labels → triage → free → `next-task` sets `status:in-progress` → commit(s)
 with `(#N)` → closed `completed` right after the last commit. Closed in an open milestone = waiting for a
-release; a closed milestone = released. Only `close-version` closes a milestone, on the user's word (Q47);
-nothing in the plugin closes a milestone or touches issues automatically (release CI stays in the project).
+release; a closed milestone = released. Only `release` closes a milestone, when the user runs it (Q47),
+or the project's CI does with `publishedBy: "ci"`.
 
 Markers (HTML comments, language-independent, preserved on every rewrite):
 - `<!-- gh-tasks:open-questions -->` — the body has open questions for the user; `next-task` takes such tasks
   last, `next-task auto` skips them.
 - `<!-- gh-tasks:original -->` — wraps the untouched original body inside `<details>` after a rewrite.
-- `<!-- gh-tasks:after-release -->` — the checklist that only a deploy can verify (kept for a future
-  `release` plugin).
+- `<!-- gh-tasks:after-release -->` — the checklist that only a deploy can verify; the `release` report lists its
+  unchecked items for the issues of the release.
 - Any foreign HTML comment (e.g. `<!-- tg-issue … -->`) is kept verbatim.
 
 Issue body template (headings translated to the project language): **What** (+ `extraLines`), **Where**,
@@ -297,17 +310,17 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
    message; existing `.claude/gh-tasks/config.json` → update mode.
 2. Questions, one block: milestones yes/no; version scheme (`patch`, `minor` or a command; `minor` brings its `rules.md` steps); language; checks
    (proposed from `package.json` scripts, each run once with its time and result shown; a heavy one is flagged
-   with a cheaper variant such as `tsc --noEmit` or `vitest run --changed`); commit format (proposed from the last ~30 `git log` subjects:
+   with a cheaper variant such as `tsc --noEmit` or `vitest run --changed`); release (`release.tag`, `release.githubRelease`, `release.publishedBy`; Q47); commit format (proposed from the last ~30 `git log` subjects:
    detected convention, or conventional commits if none, with suggested improvements); existing project
    `commit` skill → absorb and delete, or keep (Q31); gh account when `gh.mjs accounts` lists more than one login
    (Q42) — written to `config.local.json` before the labels, and the file is added to `.gitignore`.
 3. Permissions: show the block and, after confirmation, merge into the project `.claude/settings.json`:
-   allow `Bash(gh issue *)`, `Bash(gh label *)`, `Bash(gh search issues *)`, the plugin scripts (`gh.mjs`
-   included); deny
+   allow `Bash(gh issue *)`, `Bash(gh label *)`, `Bash(gh search issues *)`, the plugin scripts (`gh.mjs` and
+   `release.mjs` included); deny
    `Bash(gh api *)`, `gh repo *`, `gh pr *`, `gh workflow *`, `gh secret *`, `gh variable *`, `gh auth *`.
    Both `Bash(...)` and `PowerShell(...)` forms on Windows. Why deny `gh api`: the `gh auth` token can do
-   anything through it, and a permission rule cannot narrow it; `milestone.mjs` is the only door, with the
-   path built as `repos/<repo>/milestones[/<n>]` and the method from `GET/POST/PATCH`. `${CLAUDE_PLUGIN_ROOT}` is
+   anything through it, and a permission rule cannot narrow it; `milestone.mjs` and `release.mjs` are the only doors
+   (Q49), with the path built as `repos/<repo>/milestones[/<n>]` and the method from `GET/POST/PATCH`. `${CLAUDE_PLUGIN_ROOT}` is
    not substituted in `settings.json` and the cache path changes with every version, so the script rules are
    patterns: `Bash(node *gh-tasks*/scripts/<name>.mjs*)`. Because `gh auth *` is denied, skills check `gh` through
    `gh.mjs` (`accounts`, `label list --limit 1`), not `gh auth status`. Then the permissions for the commands the
@@ -315,7 +328,8 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
 4. Labels: `gh.mjs label list --limit 1` as the chosen account (a failure stops); `labels.mjs apply --dry-run` → show the plan and ask which foreign labels to delete (all / some /
    none) → `labels.mjs apply [--delete <names>]`: renames where safe, create/update ours, delete only the names
    the user chose (Q33, Q34).
-5. Write `config.json`, a `rules.md` skeleton with the ten headings and one-line hints, and a short
+5. Write `config.json`, a `rules.md` skeleton with the thirteen headings (in update mode `## Close version` is
+   renamed `## Release`) and one-line hints, and a short
    paragraph into the project `CLAUDE.md` («Tasks live in GitHub Issues, workflow by the gh-tasks plugin;
    config in `.claude/gh-tasks/`; a task created from chat gets `status:inbox` and is created through the plugin's
    `gh.mjs`», Q30).
@@ -348,7 +362,8 @@ why here; then «Deliberately not in this release», «Next, by themes», «Hard
 | `db/schema.sql`, `db-once/` | `## Implement` |
 | `capture-knowledge` | `## Close` |
 | Release size reference, «waits for the owner» group | `## Plan version` |
-| `/release`, CI closing the milestone, Telegram release posts | out of scope, stays in the project |
+| `/release`: preflight, notes format, `ship`, prod checks | `release` skill: `## Release`, `## Release notes`, `## Ship`, `## After release` |
+| CI publishing the release and closing the milestone, Telegram release posts | `release.publishedBy: "ci"`; the CI stays in the project |
 | Russian texts | `language: "ru"` |
 
 Everything maps; the only core change the migration needs is Q46: `## Pick` decides which in-progress issues
@@ -364,7 +379,8 @@ are this session's and how a task is claimed.
 - **v1.0.0** — README with install and usage, CHANGELOG, `claude plugin validate` clean, a full cycle
   (setup → triage → plan-version → next-task → commit → close) run on this repository from the GitHub
   marketplace.
-- Later: prosportcards migration (its own task in prosportcards), `release` and `slots` plugins.
+- **v2.0.0** — `release` replaces `close-version`: tag, GitHub Release, ship and after-release extension points.
+- Later: prosportcards migration (its own task in prosportcards), a `slots` plugin.
 
 Definition of done for v1: a fresh repository with issues gets the full cycle working with only
 `/plugin install gh-tasks@gh-tasks` and `/gh-tasks:setup`, with no edits to the plugin.

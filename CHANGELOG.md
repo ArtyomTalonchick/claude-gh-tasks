@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Breaking:** `/gh-tasks:release [auto]` replaces `/gh-tasks:close-version`. It settles the open issues, runs
+  the `rules.md → ## Release` steps, commits, tags by the new `release.tag` and, with `release.githubRelease`,
+  drafts a GitHub Release with notes (`## Release notes` sets their format). The release leaves the machine by the
+  new `## Ship` steps or by your push; a second run publishes the draft once the tag is on GitHub and closes the
+  milestone, or leaves both to the CI with `release.publishedBy: "ci"`. `## After release` steps follow, and the
+  report lists the open «After release» checklists of the release's issues. `auto` skips the gate.
+- `scripts/release.mjs` is the only door to the releases API (`status`, `draft`, `publish`); `setup` allows it.
+- `setup` asks about the release tag and GitHub Releases, renames `## Close version` to `## Release`, adds the new
+  headings, and proposes to remove tag steps that `release.tag` now does.
+- `milestone.mjs show` says why a closed issue was not completed (`[closed: not planned]`).
+
 ## 1.0.3 — 2026-10-15
 
 ## 1.0.2 — 2026-10-15

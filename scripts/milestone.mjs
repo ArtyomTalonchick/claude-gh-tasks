@@ -21,42 +21,24 @@
  *
  * v1.2 and v1.2.0 are one version: create refuses a version that already has a milestone in either form.
  */
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { runIfMain } from "./cli.mjs";
+import { run, runIfMain } from "./cli.mjs";
 import { loadConfig } from "./config.mjs";
 import { ghEnv } from "./gh.mjs";
 import {
-    buildApiArgs, findMilestone, findSameVersion, getDueOn, getLatestVersion, getMilestoneStatus, getNextMinor,
-    getNextPatch, getOpenMilestones, isMilestoneTitle, PAGE_SIZE, parseVersionOutput, splitCommand,
+    buildApiArgs, findMilestone, findSameVersion, formatIssue, getDueOn, getLatestVersion, getMilestoneStatus,
+    getNextMinor, getNextPatch, getOpenMilestones, isMilestoneTitle, PAGE_SIZE, parseVersionOutput, splitCommand,
 } from "./milestoneCore.mjs";
 
 const EXIT_NO_VERSION = 2;
-
-const run = (file, args, { input, cwd, env } = {}) => {
-    try {
-        return execFileSync(file, args, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], input, cwd, env });
-    } catch (error) {
-        if (error.code === "ENOENT") {
-            const hint = process.platform === "win32" ? " (on Windows the command must start with an executable such as node)" : "";
-            throw new Error(`${file} not found${hint}`);
-        }
-        throw new Error(`${[file, ...args.slice(0, 2)].join(" ")} failed: ${(error.stderr || error.message).trim()}`);
-    }
-};
 
 const formatHeader = (milestone) => [
     `${milestone.title} (${getMilestoneStatus(milestone)})`,
     `done ${milestone.closed_issues} of ${milestone.closed_issues + milestone.open_issues}`,
     ...(milestone.due_on ? [`due ${milestone.due_on.slice(0, 10)}`] : []),
 ].join(" — ");
-
-const formatIssue = (issue) => {
-    const labels = issue.labels.map((label) => label.name).join(", ");
-    return `  #${issue.number} [${issue.state === "OPEN" ? "open" : "closed"}] ${issue.title}${labels ? ` :: ${labels}` : ""}`;
-};
 
 const createContext = (args) => {
     const projectDir = path.resolve(args.project);
@@ -106,7 +88,7 @@ const createContext = (args) => {
 
     const getIssues = (title) => JSON.parse(gh([
         "issue", "list", "--repo", repo, "--milestone", title, "--state", "all", "--limit", "1000",
-        "--json", "number,title,state,labels",
+        "--json", "number,title,state,stateReason,labels",
     ])).sort((a, b) => a.number - b.number);
 
     return { projectDir, config, api, getMilestones, requireTitle, requireMilestone, readDescription, getIssues };

@@ -30,6 +30,7 @@ export const DEFAULTS = Object.freeze({
         trailers: false,
     },
     issueTemplate: { extraLines: [] },
+    release: { tag: "v{version}", githubRelease: false, publishedBy: "skill" },
 });
 
 // owner: letters, digits, hyphens; name: also dots and underscores, but not "." or ".."
@@ -41,6 +42,13 @@ export const isRepo = (value) => typeof value === "string" && REPO_PATTERN.test(
 const LOGIN_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 
 export const isLogin = (value) => typeof value === "string" && LOGIN_PATTERN.test(value);
+
+// The release tag: one {version} (X.Y.Z) with ref-safe characters around it, e.g. "v{version}"
+const TAG_TEMPLATE_PATTERN = /^[A-Za-z0-9._-]*\{version\}[A-Za-z0-9._-]*$/;
+
+/** A tag template, or false for releases without a tag */
+export const isTagTemplate = (value) => value === false
+    || (typeof value === "string" && TAG_TEMPLATE_PATTERN.test(value));
 
 const isPlainObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const isNonEmptyString = (value) => typeof value === "string" && value.trim() !== "";
@@ -75,6 +83,16 @@ const SCHEMA = {
         },
     },
     issueTemplate: { fields: { extraLines: stringList } },
+    release: {
+        fields: {
+            tag: { check: isTagTemplate, expected: "a tag with one {version}, such as \"v{version}\", or false" },
+            githubRelease: boolean,
+            publishedBy: {
+                check: (value) => ["skill", "ci"].includes(value),
+                expected: "\"skill\" or \"ci\"",
+            },
+        },
+    },
 };
 
 const LOCAL_SCHEMA = {
@@ -129,6 +147,9 @@ export const validateConfig = (raw) => {
     if (version.scheme !== "command" && version.command) {
         warnings.push(`"version.command" is ignored with "version.scheme": "${version.scheme}"`);
         delete version.command;
+    }
+    if (config.release.githubRelease && config.release.tag === false) {
+        errors.push("\"release.githubRelease\" needs a tag: set \"release.tag\", such as \"v{version}\"");
     }
     return { config, errors, warnings };
 };
