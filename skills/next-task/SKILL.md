@@ -1,17 +1,20 @@
 ---
 name: next-task
-description: Take the next GitHub issue through pick, plan, code, checks, commit and close — in the open milestone's order, or by priority, type and age. Run as /gh-tasks:next-task [plan] [auto] [loop] [#N | bug | feature | ops | wish].
+description: Take the next GitHub issue through pick, plan, code, checks, commit and close — in the open milestone's order, or by priority, type and age; `auto loop` closes and releases the whole milestone on its own. Run as /gh-tasks:next-task [plan] [auto] [loop] [#N | bug | feature | ops | wish].
 argument-hint: "[plan] [auto] [loop] [#N | bug | feature | ops | wish]"
 allowed-tools: >-
   Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" *)
   Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" *)
+  Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/release.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" *)
+  PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/release.mjs" *)
   Bash(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
   PowerShell(node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" *)
   Bash(git status *) PowerShell(git status *)
   Bash(git diff *) PowerShell(git diff *)
   Bash(git log *) PowerShell(git log *)
+  Bash(git tag *) PowerShell(git tag *)
 ---
 
 # gh-tasks next-task
@@ -44,6 +47,28 @@ gates stay off.
 `auto` never deletes, never closes an issue other than the one it has just committed, never invents what only the
 user knows and never touches the remote.
 
+### `auto loop`
+
+Both words together close the open milestone and release it without the user:
+
+- **Subagents.** Each task's plan and code (steps 3–4.3) run in a general-purpose subagent, so the chat holds only
+  short summaries. Its prompt: the issue number, `checks`, the `## Plan`, `## Implement` and `## Verify` rules,
+  and what it must return — the files, a short diff summary, each check's result, the proposed commit message, the
+  decisions it made on open questions, and the items only a deploy can verify (step 5.3). It never commits, never edits issues or labels and never touches the
+  remote. A question it cannot decide → it writes no code and returns the question. Checks still failing after
+  3 attempts → it returns the failure. The main thread does the rest: pick, claim, the questions in the body,
+  `## Commit` steps, commit, close, report.
+- **Open questions are decided, not skipped.** A body with `<!-- gh-tasks:open-questions -->` is taken (still
+  last in the order). Each question gets the most reasonable answer the issue, comments and code support; the
+  answers replace the open-questions list in the body under **Notes** as «Decided: …» lines, the marker removed,
+  and go into the report. Only what the agent cannot know — a secret, a credential, an account, a payment, an
+  access — still skips the task the `auto` way (step 3). `type:ops` is still skipped.
+- **Release.** The loop has ended with «No tasks left», `milestones` is on, and `milestone.mjs show` lists no open
+  issue in the open milestone → follow `${CLAUDE_PLUGIN_ROOT}/skills/release/SKILL.md` with `auto`, in the same
+  turn. Any issue left open (skipped, failing checks) → no release; the report says which ones and why.
+
+`auto` without `loop`, an issue given as `#N`, and `loop` without `auto` keep the rules above.
+
 ## 1. Config
 
 `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"`. Non-zero exit → show the
@@ -75,7 +100,7 @@ Follow `## Pick`.
      and offer `/gh-tasks:plan-version`; order by labels only on the user's word (`auto`: by labels, and say so).
    - `milestones: false`, or the rest: `prio:critical → major → normal → minor`, then
      `type:bug → feature → ops → wish`, then older first.
-   - A body with `<!-- gh-tasks:open-questions -->` goes last; `auto` skips it.
+   - A body with `<!-- gh-tasks:open-questions -->` goes last; `auto` skips it (`auto loop` takes it).
    - `auto` skips `type:ops`: its work is done by the user (step 3).
 
    Nothing left → «No tasks left», stop.
@@ -99,6 +124,7 @@ Follow `## Plan`.
    - without `auto`, or an issue given as `#N` → ask them in chat, one line each, and wait; the label stays. Answers
      that change the scope go into the body (rewrite as in step 7 of `${CLAUDE_PLUGIN_ROOT}/skills/triage/SKILL.md`,
      the open-questions list shortened to what is still open). Under `auto` the rest of the run keeps its gates;
+   - `auto loop` → decide them (see `auto loop`); what only the user can know goes on as below;
    - `auto`, an issue not given by number → write them into the body under `<!-- gh-tasks:open-questions -->`, then
      `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --remove-label status:in-progress`,
      note the issue as skipped and go back to step 2.
@@ -108,6 +134,8 @@ Follow `## Plan`.
    → plan silently and go on.
 
 ## 4. Implement
+
+Under `auto loop`, steps 3 and 4.1–4.3 run in the task's subagent (see `auto loop`).
 
 1. Follow `## Implement`, then write the change.
 2. **Checks.** Run each command of `checks` in the project root. None configured → say so. A failure → fix and
@@ -142,7 +170,9 @@ Follow `## Plan`.
 The commit (`git log --oneline -1`), the closed issue, anything left open with its reason. Never push: when the work
 is ready to leave the machine, say so.
 
-`loop` → back to step 2 in the same turn, until no task is left, «ok, stop», or a stop above.
+`loop` → back to step 2 in the same turn, until no task is left, «ok, stop», or a stop above. `auto loop` → then
+the release (see `auto loop`).
 
 Under `auto` the final report lists every commit with its diff summary and checks, every closed issue and every
-skipped one with its questions.
+skipped one with its questions; `auto loop` adds every decision taken on open questions and the release report, or
+why there was no release.
