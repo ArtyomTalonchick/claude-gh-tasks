@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.1.0 — 2026-10-23
+
 - `/gh-tasks:next-task auto loop` closes and releases the whole open milestone on its own: each task runs in a
   subagent, open questions are decided and written into the issue instead of skipping it (only secrets, accounts,
   payments and access still skip), and once every issue of the milestone is closed the run goes on as
