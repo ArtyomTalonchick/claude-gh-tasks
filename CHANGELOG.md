@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.0.0 — 2026-10-23
+
 - **Breaking:** `/gh-tasks:release [auto]` replaces `/gh-tasks:close-version`. It settles the open issues, runs
   the `rules.md → ## Release` steps, commits, tags by the new `release.tag` and, with `release.githubRelease`,
   drafts a GitHub Release with notes (`## Release notes` sets their format). The release leaves the machine by the
