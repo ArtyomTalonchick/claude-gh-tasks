@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.2.0 — 2026-10-24
+
 - `release.push`: `/gh-tasks:release` pushes the current branch and the release tag itself, over HTTPS as the
   project's gh account (`origin` may stay SSH), plain refs only and never force; a rejected push stops the release.
   The `## Ship` steps run after it, so a release goes from the gate to the published GitHub Release in one run.
