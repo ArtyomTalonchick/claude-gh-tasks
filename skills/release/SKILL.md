@@ -1,6 +1,6 @@
 ---
 name: release
-description: Release the open milestone — settle its open issues, run the project's release steps, commit, tag, draft the GitHub Release, run the project's ship steps, publish once the tag is on GitHub and close the milestone. Re-run after a push to continue. Run by the user as /gh-tasks:release [auto]; needs milestones on in the gh-tasks config. The plugin itself never pushes.
+description: Release the open milestone — settle its open issues, run the project's release steps, commit, tag, draft the GitHub Release, push the branch and the tag (release.push), run the project's ship steps, publish once the tag is on GitHub and close the milestone. Without release.push re-run after your push to continue. Run by the user as /gh-tasks:release [auto]; needs milestones on in the gh-tasks config.
 disable-model-invocation: true
 argument-hint: "[auto]"
 allowed-tools: >-
@@ -22,8 +22,8 @@ allowed-tools: >-
 
 Arguments: `$ARGUMENTS` — optional `auto`. Without it the release waits for the user's «ok» at the gate (step 5).
 With `auto` there is no gate: the run goes from the state to the report on its own. `auto` still asks what only the
-user knows (what to do with an open issue, a value a project step needs), never deletes, and the plugin's own
-commands never push.
+user knows (what to do with an open issue, a value a project step needs), never deletes, and pushes only with
+`release.push` (step 8), as the run without `auto` does.
 
 Run the plugin scripts exactly as written, quotes included:
 `node "${CLAUDE_PLUGIN_ROOT}/scripts/<name>.mjs" <command> --project "${CLAUDE_PROJECT_DIR}" …`. Every other GitHub
@@ -31,13 +31,14 @@ call goes through `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAU
 Talk to the user in their language; everything written to GitHub is in `config.language`.
 
 A release is resumable: every run reads where the release stands (step 2) and goes on from there. The tag reaches
-GitHub only by the user's push or a `## Ship` step, so a run may end at «push, then run `/gh-tasks:release` again».
+GitHub by `release.push`, a `## Ship` step or the user's push; without the first two a run ends at «push, then run
+`/gh-tasks:release` again».
 
 ## 1. Config and rules
 
 `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"`. Non-zero exit → show the
 errors, say «Run `/gh-tasks:setup` first», stop. `milestones: false` → «Milestones are off in this project — there
-is no release to make», stop. Keep `language`, `commit` and `release` (`tag`, `githubRelease`, `publishedBy`).
+is no release to make», stop. Keep `language`, `commit` and `release` (`tag`, `githubRelease`, `publishedBy`, `push`).
 
 Read `${CLAUDE_PROJECT_DIR}/.claude/gh-tasks/rules.md`, headings `## Release`, `## Release notes`, `## Ship` and
 `## After release`. A missing file or heading is skipped silently. A rule there wins over the default of the step it
@@ -106,7 +107,8 @@ One message with:
 - the files (`git status --short`) and a short summary of the diff, or «no release commit»;
 - the commit message, following `config.commit` and `## Release`;
 - the notes, in full, with `githubRelease`;
-- what follows: the tag, the draft, the `## Ship` steps or «push is yours», who publishes and closes the milestone.
+- what follows: the tag, the draft, the push (`release.push`: the branch and the tag, to the repository), the
+  `## Ship` steps or «push is yours», who publishes and closes the milestone.
 
 Wait for the user's «ok». Anything else is feedback: apply it and show the gate again. Write nothing more before
 the «ok». `auto` → no wait: the message becomes part of the report.
@@ -126,15 +128,20 @@ It creates the draft, or rewrites the notes of an existing one; a draft needs no
 
 ## 8. Ship
 
-Follow `## Ship`: the project's steps that take the release out of the machine (a push over its own channel, a
-deploy trigger). Its failure → show it, stop: the next run continues from the state.
+1. `release.push` →
+   `node "${CLAUDE_PLUGIN_ROOT}/scripts/release.mjs" push --project "${CLAUDE_PROJECT_DIR}" --title <title>`. It pushes
+   the current branch and the tag over HTTPS as the project's gh account, plain refs only. It refuses while HEAD is
+   not on a branch, or the tag is missing, already on GitHub or not at HEAD: show its reason and stop. A rejected push
+   (GitHub has commits the branch lacks) goes to the user: never force, pull or rebase to get it through.
+2. Follow `## Ship`: the project's steps that take the release out of the machine (a push over its own channel, a
+   deploy trigger). Its failure → show it, stop: the next run continues from the state.
 
-No `## Ship` steps → the push is the user's. Without a tag, go on to step 9. With a tag: say «Push the release
-commit and the tag (`<tag>`), then run `/gh-tasks:release` again», and stop here with a short report (the commit,
-the tag, the draft link). Never push yourself.
+Neither `release.push` nor `## Ship` steps → the push is the user's. Without a tag, go on to step 9. With a tag:
+say «Push the release commit and the tag (`<tag>`), then run `/gh-tasks:release` again», and stop here with a short
+report (the commit, the tag, the draft link). Never push in any other way than `release.mjs push`.
 
-After `## Ship`, run `release.mjs status` again: the tag on GitHub → step 9; not yet → say what the ship steps
-reported and stop.
+After the push and `## Ship`, with a tag, run `release.mjs status` again: the tag on GitHub → step 9; not yet → say
+what the ship steps reported and stop.
 
 ## 9. Publish and close
 
@@ -160,8 +167,8 @@ Follow `## After release`. Then collect the open checklists the release left: fo
 
 - The version, the release commit (`git log --oneline -1`) or «no release commit», the tag, the release link and
   its state, the milestone link and its state.
-- The `## Ship` and `## After release` steps run, with their results.
+- The push (`release.push`), the `## Ship` and `## After release` steps run, with their results.
 - The open after-release checklists, by issue: they are checked after the deploy.
-- What is left to the user: the push (when there are no ship steps and the run stopped there), anything a project
-  step left. End with the next command: `/gh-tasks:release` when the run stopped before publishing, otherwise
+- What is left to the user: the push (without `release.push` and ship steps, when the run stopped there),
+  anything a project step left. End with the next command: `/gh-tasks:release` when the run stopped before publishing, otherwise
   `/gh-tasks:plan-version`.

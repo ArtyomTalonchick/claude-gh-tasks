@@ -4,6 +4,7 @@
  *   node scripts/release.mjs status  --project <dir> [--title v1.3.9]
  *   node scripts/release.mjs draft   --project <dir> --title v1.3.9 --file notes.md
  *   node scripts/release.mjs publish --project <dir> --title v1.3.9
+ *   node scripts/release.mjs push    --project <dir> --title v1.3.9
  *
  * status prints JSON: the milestone of the release (the given title; else the open release milestone, else the
  * highest closed one), its version and tag (`release.tag` of the config), the local tag and whether it is at HEAD,
@@ -12,20 +13,27 @@
  *
  * draft creates the draft release of the tag with the notes from the file, or rewrites the notes of the existing
  * draft; a draft needs no tag on GitHub. publish turns the draft into a release only when its tag is on GitHub and is
- * the local tag (releaseCore getPublishRefusal). Neither pushes: the tag reaches GitHub by the user or a project step.
+ * the local tag (releaseCore getPublishRefusal).
+ *
+ * push sends the current branch and the release tag to GitHub over HTTPS as the project's gh account
+ * (`release.push`): the token goes to that one git call through an inline credential helper and the environment, git
+ * config stays as it is, and `origin` may stay SSH. Plain refs only, never force (releaseCore buildPushArgs); it
+ * refuses while the tag is missing, on GitHub already or not at HEAD (getPushRefusal). After the push it moves
+ * `origin/<branch>` when `origin` is the same repository, so `git status` shows the branch up to date.
  *
  * Why a wrapper: as in milestone.mjs, `gh api` stays denied and only releaseCore builds the API paths.
  */
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { run, runIfMain } from "./cli.mjs";
-import { loadConfig } from "./config.mjs";
+import { loadConfig, parseRepoFromRemote } from "./config.mjs";
 import { ghEnv } from "./gh.mjs";
 import { buildApiArgs, findMilestone, isMilestoneTitle, PAGE_SIZE as MILESTONE_PAGE_SIZE } from "./milestoneCore.mjs";
 import {
-    buildReleaseApiArgs, findRelease, findRemoteTag, getPublishRefusal, getReleaseState, getTagName, PAGE_SIZE,
-    pickReleaseMilestone,
+    buildPushArgs, buildReleaseApiArgs, explainPushFailure, findRelease, findRemoteTag, getPublishRefusal,
+    getPushRefusal, getReleaseState, getTagName, PAGE_SIZE, pickReleaseMilestone, PUSH_TOKEN_VARIABLE,
 } from "./releaseCore.mjs";
 
 const createContext = (args) => {
@@ -90,7 +98,7 @@ const createContext = (args) => {
         return { milestone, tag, localTag, tagAtHead, remoteTag, release };
     };
 
-    return { config, repo, gh, getState };
+    return { config, repo, env, gh, git, projectDir, getState };
 };
 
 const readNotes = (file) => {
@@ -104,6 +112,23 @@ const readNotes = (file) => {
 const requireGithubRelease = (config) => {
     if (!config.release.githubRelease) {
         throw new Error("GitHub Releases are off in .claude/gh-tasks/config.json (\"release.githubRelease\": false)");
+    }
+};
+
+// the branch HEAD is on; detached → null
+const getBranch = (git) => {
+    try {
+        return git(["symbolic-ref", "--quiet", "--short", "HEAD"]) || null;
+    } catch {
+        return null;
+    }
+};
+
+const isOriginRepo = (git, repo) => {
+    try {
+        return parseRepoFromRemote(git(["remote", "get-url", "origin"])) === repo;
+    } catch {
+        return false;
     }
 };
 
@@ -153,6 +178,31 @@ const commands = {
         if (refusal) throw new Error(refusal);
         const published = gh(buildReleaseApiArgs("update", repo, { id: release.id, hasPayload: true }), { draft: false });
         console.log(`published: ${tag} — ${published.html_url}`);
+    },
+
+    push: ({ config, repo, env, git, projectDir, getState }, args) => {
+        if (!config.release.push) {
+            throw new Error("the release push is off in .claude/gh-tasks/config.json (\"release.push\": false)");
+        }
+        if (args.title === undefined) throw new Error("--title vX.Y.Z is required");
+        const branch = getBranch(git);
+        const { tag, localTag, tagAtHead, remoteTag } = getState();
+        const refusal = getPushRefusal({ branch, tag, localTag, tagAtHead, remoteTag });
+        if (refusal) throw new Error(refusal);
+        // GH_TOKEN is set when the project has an account; else the active gh account's token
+        const token = env.GH_TOKEN || run("gh", ["auth", "token", "--hostname", "github.com"], { env }).trim();
+        try {
+            execFileSync("git", ["-C", projectDir, ...buildPushArgs(repo, { branch, tag })], {
+                encoding: "utf8",
+                stdio: ["ignore", "pipe", "pipe"],
+                env: { ...process.env, [PUSH_TOKEN_VARIABLE]: token, GIT_TERMINAL_PROMPT: "0" },
+            });
+        } catch (error) {
+            throw new Error(explainPushFailure(error.stderr ?? error.message, branch));
+        }
+        // a push by URL leaves the remote-tracking ref behind
+        if (isOriginRepo(git, repo)) git(["update-ref", `refs/remotes/origin/${branch}`, "HEAD"]);
+        console.log(`pushed to ${repo}: ${[branch, tag].filter(Boolean).join(", ")}`);
     },
 };
 

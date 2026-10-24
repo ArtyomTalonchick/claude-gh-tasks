@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `release.push`: `/gh-tasks:release` pushes the current branch and the release tag itself, over HTTPS as the
+  project's gh account (`origin` may stay SSH), plain refs only and never force; a rejected push stops the release.
+  The `## Ship` steps run after it, so a release goes from the gate to the published GitHub Release in one run.
+  `setup` asks for it and proposes `true`; a config without it keeps `false`.
+
 ## 2.1.0 — 2026-10-23
 
 - `/gh-tasks:next-task auto loop` closes and releases the whole open milestone on its own: each task runs in a

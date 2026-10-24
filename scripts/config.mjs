@@ -30,7 +30,7 @@ export const DEFAULTS = Object.freeze({
         trailers: false,
     },
     issueTemplate: { extraLines: [] },
-    release: { tag: "v{version}", githubRelease: false, publishedBy: "skill" },
+    release: { tag: "v{version}", githubRelease: false, publishedBy: "skill", push: false },
 });
 
 // owner: letters, digits, hyphens; name: also dots and underscores, but not "." or ".."
@@ -91,6 +91,7 @@ const SCHEMA = {
                 check: (value) => ["skill", "ci"].includes(value),
                 expected: "\"skill\" or \"ci\"",
             },
+            push: boolean,
         },
     },
 };

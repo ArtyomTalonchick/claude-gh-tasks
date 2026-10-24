@@ -65,7 +65,8 @@ Both words together close the open milestone and release it without the user:
   access — still skips the task the `auto` way (step 3). `type:ops` is still skipped.
 - **Release.** The loop has ended with «No tasks left», `milestones` is on, and `milestone.mjs show` lists no open
   issue in the open milestone → follow `${CLAUDE_PLUGIN_ROOT}/skills/release/SKILL.md` with `auto`, in the same
-  turn. Any issue left open (skipped, failing checks) → no release; the report says which ones and why.
+  turn; with `release.push` it pushes the release commit and the tag. Any issue left open (skipped, failing
+  checks) → no release; the report says which ones and why.
 
 `auto` without `loop`, an issue given as `#N`, and `loop` without `auto` keep the rules above.
 
@@ -167,8 +168,8 @@ Under `auto loop`, steps 3 and 4.1–4.3 run in the task's subagent (see `auto l
 
 ## 6. Report
 
-The commit (`git log --oneline -1`), the closed issue, anything left open with its reason. Never push: when the work
-is ready to leave the machine, say so.
+The commit (`git log --oneline -1`), the closed issue, anything left open with its reason. Never push a task
+commit: when the work is ready to leave the machine, say so; only the release pushes (`release.push`).
 
 `loop` → back to step 2 in the same turn, until no task is left, «ok, stop», or a stop above. `auto loop` → then
 the release (see `auto loop`).

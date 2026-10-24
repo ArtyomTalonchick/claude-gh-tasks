@@ -35,7 +35,7 @@ describe("validateConfig", () => {
             checks: ["npm run lint", "npm test"],
             commit: { format: "type (scope): subject", example: "fix (cart): x", types: ["fix"], trailers: false },
             issueTemplate: { extraLines: ["**Who is affected:** <customers | staff>"] },
-            release: { tag: "release-{version}", githubRelease: true, publishedBy: "ci" },
+            release: { tag: "release-{version}", githubRelease: true, publishedBy: "ci", push: true },
         };
         const { config, errors, warnings } = validateConfig(raw);
         assert.deepEqual(config, raw);
@@ -66,6 +66,7 @@ describe("validateConfig", () => {
         [{ release: { tag: true } }, "\"release.tag\" must be"],
         [{ release: { githubRelease: "yes" } }, "\"release.githubRelease\" must be"],
         [{ release: { publishedBy: "user" } }, "\"release.publishedBy\" must be"],
+        [{ release: { push: "yes" } }, "\"release.push\" must be"],
         [{ release: { tag: false, githubRelease: true } }, "\"release.githubRelease\" needs a tag"],
     ].forEach(([raw, message], i) => {
         test(`${i + 5}. error: ${JSON.stringify(raw)}`, () => {

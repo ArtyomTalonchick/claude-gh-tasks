@@ -160,8 +160,10 @@ of the release grouped by type.
 
 `<!-- release, after the tag and the draft: push, deploy trigger -->`
 
-How the release leaves the machine. The plugin never pushes: without this heading the user pushes the release
-commit and the tag, then runs `/gh-tasks:release` again, which publishes the draft once the tag is on GitHub.
+How the release leaves the machine. With `release.push` the plugin pushes the branch and the tag first, and these
+steps run after it (a deploy trigger, a notification); a project with a push of its own keeps `release.push` off
+and pushes here. Neither → the user pushes the release commit and the tag, then runs `/gh-tasks:release` again,
+which publishes the draft once the tag is on GitHub.
 
 > Run `node tools/release/ship.mjs --tag <tag>`: it pushes `main` and the tag over HTTPS, and the tag push starts the
 > deploy.

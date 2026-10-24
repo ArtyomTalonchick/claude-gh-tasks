@@ -1,8 +1,8 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-    buildReleaseApiArgs, findRelease, findRemoteTag, getPublishRefusal, getReleaseState, getTagName, isTagName,
-    pickReleaseMilestone,
+    buildPushArgs, buildReleaseApiArgs, explainPushFailure, findRelease, findRemoteTag, getPublishRefusal,
+    getPushRefusal, getReleaseState, getTagName, isBranchName, isTagName, pickReleaseMilestone, PUSH_TOKEN_VARIABLE,
 } from "../releaseCore.mjs";
 
 const REPO = "owner/name";
@@ -164,5 +164,73 @@ describe("getPublishRefusal", () => {
         test(`${i + 3}. refused: ${JSON.stringify(change)}`, () => {
             assert.match(getPublishRefusal({ ...state, ...change }), message);
         });
+    });
+});
+
+describe("buildPushArgs / isBranchName", () => {
+    test("1. the branch and the tag go to the HTTPS URL of the repository, plain refs only", () => {
+        const args = buildPushArgs(REPO, { branch: "main", tag: "v1.2.0" });
+        assert.deepEqual(args.slice(-4), ["push", "https://github.com/owner/name.git", "main", "v1.2.0"]);
+        assert.ok(!args.some((arg) => arg.startsWith("--force") || arg === "-f" || arg.includes(":")
+            && !arg.startsWith("credential.helper=") && !arg.startsWith("https://")));
+    });
+
+    test("2. the token is read from the environment by the helper, never passed as an argument", () => {
+        const args = buildPushArgs(REPO, { branch: "main", tag: null });
+        assert.deepEqual(args.slice(0, 3), ["-c", "credential.helper=", "-c"]);
+        assert.ok(args[3].includes(`password=$${PUSH_TOKEN_VARIABLE}`));
+        assert.deepEqual(args.slice(-3), ["push", "https://github.com/owner/name.git", "main"]);
+    });
+
+    ["main", "release/2.1", "feature-x_1.2"].forEach((branch, i) => {
+        test(`${i + 3}. a branch name: ${branch}`, () => assert.ok(isBranchName(branch)));
+    });
+
+    ["", "-f", "--force", "main:other", "+main", "a..b", ".hidden", "a/.b", "main.", "a b", "/main", "main/"]
+        .forEach((branch, i) => {
+            test(`${i + 6}. refused: ${JSON.stringify(branch)}`, () => {
+                assert.equal(isBranchName(branch), false);
+                assert.throws(() => buildPushArgs(REPO, { branch, tag: null }), /not a branch name/);
+            });
+        });
+
+    test("18. a bad tag or repository is refused", () => {
+        assert.throws(() => buildPushArgs(REPO, { branch: "main", tag: "--delete" }), /not a tag name/);
+        assert.throws(() => buildPushArgs("owner", { branch: "main", tag: null }), /"owner\/name"/);
+    });
+});
+
+describe("getPushRefusal", () => {
+    const state = { branch: "main", tag: "v1.2.0", localTag: "aaa", tagAtHead: true, remoteTag: null };
+
+    test("1. the local tag at HEAD, not on GitHub → allowed", () => {
+        assert.equal(getPushRefusal(state), null);
+    });
+
+    test("2. no tag in the config → the branch alone is allowed", () => {
+        assert.equal(getPushRefusal({ branch: "main", tag: null, localTag: null, tagAtHead: null, remoteTag: null }), null);
+    });
+
+    [
+        [{ branch: null }, /not on a branch/],
+        [{ localTag: null, tagAtHead: null }, /no local tag/],
+        [{ remoteTag: "aaa" }, /on GitHub already/],
+        [{ tagAtHead: false }, /not at HEAD/],
+    ].forEach(([change, message], i) => {
+        test(`${i + 3}. refused: ${JSON.stringify(change)}`, () => {
+            assert.match(getPushRefusal({ ...state, ...change }), message);
+        });
+    });
+});
+
+describe("explainPushFailure", () => {
+    test("1. a rejection says the user decides and never forces", () => {
+        const stderr = " ! [rejected]        main -> main (fetch first)\nerror: failed to push some refs";
+        assert.match(explainPushFailure(stderr, "main"), /GitHub has commits that main lacks.*never force/);
+    });
+
+    test("2. any other failure keeps git's message", () => {
+        assert.equal(explainPushFailure("fatal: Authentication failed\n", "main"),
+            "git push failed: fatal: Authentication failed");
     });
 });

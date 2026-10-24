@@ -80,12 +80,16 @@ Claude Code to apply it. An update arrives only when the release's `version` is 
    release steps of `rules.md → ## Release` (checks, version bump, changelog), writes the GitHub Release notes,
    shows the version, the issues, the diff, the commit message and the notes, and after your «ok» commits, tags
    (`release.tag`) and creates a draft GitHub Release (`release.githubRelease`). Then the release leaves the
-   machine: the `## Ship` steps do it, or you push the commit and the tag and run `/gh-tasks:release` again. Once
+   machine: with `release.push` it pushes the branch and the tag over HTTPS as the project's gh account, then the
+   `## Ship` steps run (a deploy); without it the `## Ship` steps push, or you push the commit and the tag and run
+   `/gh-tasks:release` again. Once
    the tag is on GitHub it publishes the draft and closes the milestone — unless `publishedBy` is `ci`, then your
    CI does both. Last, the `## After release` steps and the open «After release» checklists of the release's
    issues. `auto` skips the gate; questions only you can answer are still asked.
 
-The plugin's own commands never push, pull or fetch: the remote is yours, or the `## Ship` steps you write.
+The plugin's own commands never pull or fetch, and push only the release with `release.push`: plain refs, never
+force — a rejected push goes back to you. Without `release.push` the remote is yours, or the `## Ship` steps you
+write.
 
 ## Configuration
 
@@ -103,6 +107,7 @@ The plugin's own commands never push, pull or fetch: the remote is yours, or the
 | `release.tag` | the release tag, `{version}` being `X.Y.Z`; `false` — no tag | `v{version}` |
 | `release.githubRelease` | draft a GitHub Release with notes and publish it once the tag is on GitHub | `false` |
 | `release.publishedBy` | `skill`, or `ci` when the project's CI publishes the release and closes the milestone | `skill` |
+| `release.push` | `release` pushes the current branch and the tag over HTTPS as the project's gh account, never force | `false` |
 
 `.claude/gh-tasks/config.local.json` is per user and git-ignored: `{ "account": "<login>" }` is the gh account the
 plugin acts as in this project. Every GitHub call of the plugin goes through `scripts/gh.mjs`, which runs `gh` with

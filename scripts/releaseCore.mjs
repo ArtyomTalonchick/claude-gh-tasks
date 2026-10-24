@@ -1,7 +1,8 @@
 /*
  * Pure release mechanics for `release.mjs`. This is the only place that builds a `gh api` call for releases and tags:
  * the paths are `repos/<repo>/releases[/<id>]` and `repos/<repo>/git/matching-refs/tags/<tag>`, each with a fixed
- * method, so the script can be allowed while `gh api` itself stays denied. There is no delete on purpose.
+ * method, so the script can be allowed while `gh api` itself stays denied. There is no delete on purpose. The push of
+ * the release is built here too: the branch and the tag, plain refs over HTTPS.
  */
 import { isRepo } from "./config.mjs";
 import { compareVersions, getOpenMilestones, isMilestoneTitle, parseVersion } from "./milestoneCore.mjs";
@@ -76,6 +77,60 @@ export const pickReleaseMilestone = (milestones) => {
         .filter((milestone) => milestone.state === "closed" && isMilestoneTitle(milestone.title))
         .sort((a, b) => compareVersions(a.title, b.title))
         .at(-1) ?? null;
+};
+
+// A branch name as `git push` takes it: segments of ref-safe characters, no leading dot or hyphen, no ".."
+const BRANCH_PATTERN = /^(?![.-])(?!.*\.\.)(?!.*\/[.-])[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/;
+
+export const isBranchName = (branch) => typeof branch === "string" && BRANCH_PATTERN.test(branch)
+    && !branch.endsWith(".");
+
+/** The variable the push token travels in: the environment of one git call, never its arguments */
+export const PUSH_TOKEN_VARIABLE = "GH_TASKS_PUSH_TOKEN";
+
+// The empty helper first drops the helpers of the user's git config for this call; the second answers `get` only
+const PUSH_CREDENTIAL_HELPER = "!f() { test \"$1\" = get && echo username=x-access-token"
+    + ` && echo "password=$${PUSH_TOKEN_VARIABLE}"; }; f`;
+
+/**
+ * Arguments for `git push` of the release over HTTPS: plain refs only — no force, no deletes, no refspecs — so a push
+ * can only fast-forward what GitHub already has.
+ * @param {string} repo
+ * @param {{ branch: string, tag: string | null }} refs
+ */
+export const buildPushArgs = (repo, { branch, tag }) => {
+    if (!isRepo(repo)) throw new Error(`the repository must be "owner/name", got ${JSON.stringify(repo)}`);
+    if (!isBranchName(branch)) throw new Error(`not a branch name: ${JSON.stringify(branch)}`);
+    if (tag !== null && !isTagName(tag)) throw new Error(`not a tag name: ${JSON.stringify(tag)}`);
+    return [
+        "-c", "credential.helper=", "-c", `credential.helper=${PUSH_CREDENTIAL_HELPER}`,
+        "push", `https://github.com/${repo}.git`, branch, ...(tag ? [tag] : []),
+    ];
+};
+
+/**
+ * Why the release cannot be pushed, or null. The branch goes out with the tag, so the tag must be at HEAD: commits
+ * after it would leave with the release without being in it.
+ * @param {{ branch: string | null, tag: string | null, localTag: string | null, tagAtHead: boolean | null,
+ *   remoteTag: string | null }} state
+ */
+export const getPushRefusal = ({ branch, tag, localTag, tagAtHead, remoteTag }) => {
+    if (!branch) return "HEAD is not on a branch: check out the release branch, then push";
+    if (!tag) return null;
+    if (!localTag) return `no local tag ${tag}: make the release commit and the tag first`;
+    if (remoteTag) return `the tag ${tag} is on GitHub already: nothing to push for it`;
+    if (!tagAtHead) return `the tag ${tag} is not at HEAD: commits after it would be pushed with the release`;
+    return null;
+};
+
+/** The stderr of a failed push → one line for the user; a rejection is never forced */
+export const explainPushFailure = (stderr, branch) => {
+    const text = String(stderr ?? "").trim();
+    if (/\[rejected\]|non-fast-forward|fetch first/.test(text)) {
+        return `GitHub has commits that ${branch} lacks, the push was rejected: `
+            + "never force or rebase — the user decides";
+    }
+    return `git push failed: ${text || "no output"}`;
 };
 
 /**

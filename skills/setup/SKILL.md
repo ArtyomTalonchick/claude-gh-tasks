@@ -73,9 +73,12 @@ the current value), so the user can reply «ok» or change single items:
   - `githubRelease` — draft a GitHub Release with notes and publish it once the tag is on GitHub; needs a tag.
     Propose `true` with a tag;
   - `publishedBy` — `skill` (default), or `ci` when the project's CI publishes the release and closes the
-    milestone.
+    milestone;
+  - `push` — `release` pushes the current branch and the tag over HTTPS as the project's gh account, never force.
+    Propose `true`; when `## Ship` of `rules.md` already pushes (a script of its own), propose to drop that step
+    and take `true`, or keep it with `false`.
 
-  The plugin never pushes: the user pushes the tag, or a `## Ship` step of `rules.md` does.
+  Without `push` the user pushes the tag, or a `## Ship` step does.
 - **Language** of issues, milestones and comments — propose the language of recent issues and commits.
 - **Checks** — commands run before showing a change; propose them from `package.json` scripts (lint, type check,
   test). None found → propose an empty list; never invent commands. Run each proposed check once in the project
@@ -132,7 +135,8 @@ the existing entry that precedes it in the block; none exists → at the end of 
 The `PowerShell(...)` entries are for Windows; on other systems offer only the `Bash(...)` ones. Explain the deny
 of `gh api` in one line: its token can do anything and a rule cannot narrow it; milestones go through
 `milestone.mjs`, which only reaches `repos/<repo>/milestones`, and releases through `release.mjs`, which only
-reads and writes `repos/<repo>/releases` and reads the tag refs. `gh.mjs` runs only `gh issue`, `gh label` and
+reads and writes `repos/<repo>/releases`, reads the tag refs and, with `release.push`, pushes the branch and the
+tag without force. `gh.mjs` runs only `gh issue`, `gh label` and
 `gh search issues`, as the configured account, so allowing it opens nothing the deny list closes.
 
 Also check that `enabledPlugins` in the same file contains `"gh-tasks@gh-tasks": true`; if the plugin was installed
