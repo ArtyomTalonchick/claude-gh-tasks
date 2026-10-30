@@ -157,7 +157,8 @@ Under `auto loop`, steps 3 and 4.1–4.3 run in the task's subagent (see `auto l
 ## 5. Commit and close
 
 1. Run the `gh-tasks:commit` skill with `#N`; the subject ends with ` (#N)`. Under `auto` its gate is off; otherwise
-   the «ok» of step 4 is the approval. A task may need more than one commit; only the last one closes it.
+   the «ok» of step 4 is the approval. A task may need more than one commit: each carries ` (#N)`, and the issue is
+   closed only after the last one.
 2. Follow `## After commit`.
 3. Items only a deploy can verify → put them in the body under `<!-- gh-tasks:after-release -->` as an «After
    release» checklist; they do not block closing.

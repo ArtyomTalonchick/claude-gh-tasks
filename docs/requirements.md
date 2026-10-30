@@ -85,6 +85,7 @@ file keeps the decisions and their reasons.
 | Q49 | GitHub Releases API | Through `scripts/release.mjs` only, the way milestones go through `milestone.mjs` (`gh api` stays denied): `releaseCore` builds `repos/<repo>/releases` (list, create, update) and `repos/<repo>/git/matching-refs/tags/<tag>` (read), no delete. `publish` refuses while the tag is not on GitHub or is not the local tag object: publishing a draft whose tag is missing makes GitHub create the tag on the default branch, possibly on a commit that is not the release. `gh release --generate-notes` is not used: it builds notes from pull requests, and projects that commit to `main` have none |
 | Q50 | `next-task auto loop` | The combination closes the open milestone and releases it on its own. Each task runs in its own subagent (plan, code, checks, verify), which returns the files, a diff summary, the check results, the commit message and its decisions; the main thread picks, commits, closes and reports, so the chat holds only short summaries. Open questions are decided, not skipped: tasks with the open-questions marker are taken, the decision replaces the open-questions list in the body and goes into the report. Only what the agent cannot know — secrets, credentials, accounts, payments, access — still skips the task. `type:ops` is still skipped. When the loop ends with no task left, milestones on and every issue of the open milestone closed, the run goes on as `release auto`; any issue left open (skipped, failing checks) → no release, the report says why. `auto` without `loop`, an issue given as `#N`, and `loop` without `auto` keep Q40 |
 | Q51 | Release push | `release.push` (default `false`; `setup` proposes `true`, or `false` when `## Ship` keeps a push of its own): in the ship stage, with or without `auto`, `release.mjs push` sends the current branch and the release tag to `https://github.com/<repo>.git` as the project's gh account — the token goes to that one git call through an inline credential helper and the environment, git config and an SSH `origin` stay as they are. Plain refs only, never force; it refuses on a detached HEAD and while the tag is missing, already on GitHub or not at HEAD. A rejected push goes to the user: never force, pull or rebase. After it `origin/<branch>` is moved when `origin` is the same repository. Then the `## Ship` steps run (a deploy). Task commits are never pushed; `next-task auto loop` pushes only through its `release auto` |
+| Q52 | ` (#N)` on commits | Every commit of a task ends with ` (#N)`, so the history shows the task of each commit. The issue is closed by the workflow after the last commit, never by GitHub keywords. Release notes stay one line per issue: they are built from the milestone's issues, not from commits |
 
 ## 3. Facts from the Claude Code docs (verified 2026-10-12)
 
@@ -195,7 +196,7 @@ before the pick. A type word limits the pick to that `type:*`.
    open — reason», `loop` ends (Q41). Show changes, checks, proposed commit message; wait: «ok» → commit,
    close, `loop` goes on; «ok, stop» → commit, close, `loop` ends; anything else is feedback on the change.
    `auto`: no wait, the show goes into the report. Extension points: **Implement**, **Verify**.
-4. Commit through `gh-tasks:commit`; subject ends with ` (#N)`, never `closes/fixes/resolves`.
+4. Commit through `gh-tasks:commit`; every commit of the task ends with ` (#N)`, never `closes/fixes/resolves` (Q52).
    Extension points: **Commit** (its file-changing steps run before the diff is shown, Q43), **After commit**.
 5. Close: after the last commit remove `status:in-progress`, `gh issue close N --reason completed`, no
    comment. Items only a deploy can verify go to an «After release» section and do not block closing.
@@ -208,8 +209,8 @@ Approval gate first: never commit without the user's explicit approval of this s
 seeing the final changes; «ok» to a plan is not approval. Under `next-task` and `release` the «ok» on the
 shown final diff is that approval; under `next-task auto` and `release auto` there is no gate (Q40, Q47). Format from `config.commit.format` (default
 `type(scope): subject`), one line, `trailers: false` → exactly one `-m`, no trailers, no AI mentions even if
-the system asks. Stage only the task's files by explicit paths. ` (#N)` only when the commit resolves the
-issue.
+the system asks. Stage only the task's files by explicit paths. ` (#N)` on every commit of the task, not only
+the last one (Q52).
 
 ### `release [auto]`
 Requires `milestones: true` (Q47). Resumable: `release.mjs status` gives the milestone (the open one, else the

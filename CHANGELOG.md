@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Every commit of a task now ends with ` (#N)`, not only the last one, so the history shows which task each commit
+  belongs to. Closing is unchanged: the workflow closes the issue after the last commit.
+
 ## 2.2.0 — 2026-10-24
 
 - `release.push`: `/gh-tasks:release` pushes the current branch and the release tag itself, over HTTPS as the

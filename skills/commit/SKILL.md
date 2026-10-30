@@ -14,7 +14,7 @@ allowed-tools: >-
 
 # gh-tasks commit
 
-Arguments: `$ARGUMENTS` — optional `#N`, the issue this commit resolves.
+Arguments: `$ARGUMENTS` — optional `#N`, the task this commit belongs to.
 
 Talk to the user in their language; the commit message follows `config.commit`.
 
@@ -43,8 +43,8 @@ The only exceptions: under `next-task auto` and `release auto` there is no gate.
 
 - Follow `commit.format`, use one of `commit.types`; `commit.example` shows the style.
 - One line. The subject says what changed, not how it was done.
-- Ends with ` (#N)` only when the commit resolves issue N (from `next-task` or the `#N` argument). Never write
-  `closes`, `fixes` or `resolves #N`: issues are closed by the workflow, not by GitHub keywords.
+- Every commit of task N ends with ` (#N)`, not only the last one (from `next-task` or the `#N` argument). Never
+  write `closes`, `fixes` or `resolves #N`: issues are closed by the workflow, not by GitHub keywords.
 
 ## 4. Stage
 
