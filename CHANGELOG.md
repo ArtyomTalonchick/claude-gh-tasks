@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.2.1 — 2026-10-31
+
 - Every commit of a task now ends with ` (#N)`, not only the last one, so the history shows which task each commit
   belongs to. Closing is unchanged: the workflow closes the issue after the last commit.
 
