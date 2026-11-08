@@ -63,7 +63,8 @@ Pick the stage:
 - **Prepare** — the milestone is open and the tag is not made yet (`localTag` and `remoteTag` null), or the config
   has no tag → step 3.
 - **Ship** — the tag exists locally and is not on GitHub (`remoteTag` null) → step 8.
-- **Publish** — the tag is on GitHub → step 9. `remoteTagIsLocal: false` → «The tag on GitHub is not the local
+- **Publish** — the tag is on GitHub → step 9; an unticked release step of the issues (step 3) left by an earlier
+  run → step 8.3 first. `remoteTagIsLocal: false` → «The tag on GitHub is not the local
   one», show both, stop: only the user decides which one is the release. With `publishedBy: "ci"` and the
   milestone still open, the CI may still be at work: say so before step 10.
 
@@ -89,6 +90,12 @@ milestone's issues; a closed issue not completed shows its reason (`[closed: not
     or `--reason "not planned"`.
 
 The issues of the release are the milestone's issues closed as completed.
+
+**Release steps of the issues.** For each issue of the release, read the `<!-- gh-tasks:release-steps -->` section
+of its body (`gh.mjs … issue view N --json body`): a «Release steps» checklist of steps this release needs that are
+not part of every release. Keep each item with its issue. A ticked item has run already and is not run again. By
+default they run after the `## Ship` steps (step 8.3); an item that says it replaces or reorders `## Ship` steps wins,
+for this release only, ticked or not. A run that starts at the ship or the publish stage reads them too.
 
 ## 4. Release steps and notes
 
@@ -125,7 +132,8 @@ One message with:
   where the text goes — «`CHANGELOG.md`, section X.Y.Z, and the GitHub Release notes» — and the changelog section
   is not shown again in the diff summary; the links that follow it go to the notes only;
 - what follows: the tag, the draft, the push (`release.push`: the branch and the tag, to the repository), the
-  `## Ship` steps or «push is yours», who publishes and closes the milestone.
+  `## Ship` steps or «push is yours», the release steps of the issues (step 3), each with its issue and with what
+  it changes in `## Ship`, who publishes and closes the milestone.
 
 Wait for the user's «ok». Anything else is feedback: apply it and show the gate again; feedback on a text shared
 with the changelog changes the section in `CHANGELOG.md` and the notes file alike. Write nothing more before
@@ -152,7 +160,14 @@ It creates the draft, or rewrites the notes of an existing one; a draft needs no
    not on a branch, or the tag is missing, already on GitHub or not at HEAD: show its reason and stop. A rejected push
    (GitHub has commits the branch lacks) goes to the user: never force, pull or rebase to get it through.
 2. Follow `## Ship`: the project's steps that take the release out of the machine (a push over its own channel, a
-   deploy trigger). Its failure → show it, stop: the next run continues from the state.
+   deploy trigger), as the release steps of the issues change them for this release. Its failure → show it, stop:
+   the next run continues from the state.
+3. Run the unticked release steps of the issues (step 3) in order, `auto` included: they were written into the
+   tasks on purpose. They need the release out of the machine: with neither `release.push` nor `## Ship` steps they
+   wait for the run after the user's push (the publish stage). A step that needs a value only the user knows is asked. Each step that succeeds → tick its item
+   in the issue body (`gh.mjs … issue edit N --body-file <file>`, the rest of the body unchanged), so no later run
+   repeats it. A failure → show it with its issue, stop: the next run continues from the state and runs the
+   unticked ones.
 
 Neither `release.push` nor `## Ship` steps → the push is the user's. Without a tag, go on to step 9. With a tag:
 say «Push the release commit and the tag (`<tag>`), then run `/gh-tasks:release` again», and stop here with a short
@@ -186,7 +201,8 @@ Follow `## After release`. Then collect the open checklists the release left: fo
 
 - The version, the release commit (`git log --oneline -1`) or «no release commit», the tag, the release link and
   its state, the milestone link and its state.
-- The push (`release.push`), the `## Ship` and `## After release` steps run, with their results.
+- The push (`release.push`), the `## Ship` steps, the release steps of the issues (by issue) and the
+  `## After release` steps run, with their results; a release step left unticked, with its issue.
 - The open after-release checklists, by issue: they are checked after the deploy.
 - What is left to the user: the push (without `release.push` and ship steps, when the run stopped there),
   anything a project step left. End with the next command: `/gh-tasks:release` when the run stopped before publishing, otherwise

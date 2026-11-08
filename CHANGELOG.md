@@ -10,6 +10,9 @@
 - `/gh-tasks:release` uses one text for the changelog and the GitHub Release: the default notes are the
   `CHANGELOG.md` section of the version, followed by the compare and milestone links, and the gate shows that text
   once. `/gh-tasks:setup` proposes `release.githubRelease: true` (and a tag) for a project with `CHANGELOG.md`.
+- One-off release steps live in the issue that needs them, under `<!-- gh-tasks:release-steps -->`, instead of
+  `rules.md → ## Ship`: `/gh-tasks:next-task` writes them there, and `/gh-tasks:release` shows them at the gate,
+  runs them after `## Ship` (or in its place when a step says so) and ticks each one, so a re-run skips it.
 
 ## 2.2.1 — 2026-10-31
 

@@ -83,7 +83,9 @@ Claude Code to apply it. An update arrives only when the release's `version` is 
    (`release.tag`) and creates a draft GitHub Release (`release.githubRelease`). Then the release leaves the
    machine: with `release.push` it pushes the branch and the tag over HTTPS as the project's gh account, then the
    `## Ship` steps run (a deploy); without it the `## Ship` steps push, or you push the commit and the tag and run
-   `/gh-tasks:release` again. Once
+   `/gh-tasks:release` again. Steps only this release needs come from its issues — the «Release steps» section
+   (`<!-- gh-tasks:release-steps -->`) that `next-task` writes — and run after `## Ship`, or in its place when they
+   say so; each is ticked in the issue once it ran. Once
    the tag is on GitHub it publishes the draft and closes the milestone — unless `publishedBy` is `ci`, then your
    CI does both. Last, the `## After release` steps and the open «After release» checklists of the release's
    issues. `auto` skips the gate; questions only you can answer are still asked.

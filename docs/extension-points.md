@@ -174,6 +174,10 @@ steps run after it (a deploy trigger, a notification); a project with a push of 
 and pushes here. Neither → the user pushes the release commit and the tag, then runs `/gh-tasks:release` again,
 which publishes the draft once the tag is on GitHub.
 
+Only steps every release runs belong here. A step one release needs (a deploy in another order, a one-time
+migration) goes into the body of the task that needs it, under `<!-- gh-tasks:release-steps -->`; `release` runs
+it after these steps, or in their place when it says so, for that release only.
+
 > Run `node tools/release/ship.mjs --tag <tag>`: it pushes `main` and the tag over HTTPS, and the tag push starts the
 > deploy.
 

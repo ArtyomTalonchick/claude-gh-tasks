@@ -54,7 +54,8 @@ Both words together close the open milestone and release it without the user:
 - **Subagents.** Each task's plan and code (steps 3–4.3) run in a general-purpose subagent, so the chat holds only
   short summaries. Its prompt: the issue number, `checks`, the `## Plan`, `## Implement` and `## Verify` rules,
   and what it must return — the files, a short diff summary, each check's result, the proposed commit message, the
-  decisions it made on open questions, and the items only a deploy can verify (step 5.3). It never commits, never edits issues or labels and never touches the
+  decisions it made on open questions, the items only a deploy can verify and the steps only this task's release
+  needs (step 5.3). It never commits, never edits issues or labels and never touches the
   remote. A question it cannot decide → it writes no code and returns the question. Checks still failing after
   3 attempts → it returns the failure. The main thread does the rest: pick, claim, the questions in the body,
   `## Commit` steps, commit, close, report.
@@ -161,7 +162,10 @@ Under `auto loop`, steps 3 and 4.1–4.3 run in the task's subagent (see `auto l
    closed only after the last one.
 2. Follow `## After commit`.
 3. Items only a deploy can verify → put them in the body under `<!-- gh-tasks:after-release -->` as an «After
-   release» checklist; they do not block closing.
+   release» checklist; they do not block closing. A step the task's release needs that is not part of every
+   release (a deploy in another order, a one-time migration) → in the body under
+   `<!-- gh-tasks:release-steps -->` as a «Release steps» checklist, saying when it replaces or reorders `## Ship`
+   steps; never into `rules.md`. `release` runs it and ticks it.
 4. `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue edit N --remove-label status:in-progress`,
    then `node "${CLAUDE_PLUGIN_ROOT}/scripts/gh.mjs" --project "${CLAUDE_PROJECT_DIR}" issue close N --reason completed`.
    No comment. Not closing → say «#N left open — reason».
