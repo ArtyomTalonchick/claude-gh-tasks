@@ -7,6 +7,9 @@
 - `/gh-tasks:release` reads a closed milestone with no tag, locally or on GitHub, as released (the project turned
   `release.tag` / `release.githubRelease` on after it) and points to `/gh-tasks:plan-version`, instead of matching
   no stage.
+- `/gh-tasks:release` uses one text for the changelog and the GitHub Release: the default notes are the
+  `CHANGELOG.md` section of the version, followed by the compare and milestone links, and the gate shows that text
+  once. `/gh-tasks:setup` proposes `release.githubRelease: true` (and a tag) for a project with `CHANGELOG.md`.
 
 ## 2.2.1 — 2026-10-31
 

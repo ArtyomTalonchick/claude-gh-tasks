@@ -69,9 +69,10 @@ the current value), so the user can reply «ok» or change single items:
   keeps it and gets nothing.
 - **Release** (only with milestones) — what `/gh-tasks:release` makes besides closing the milestone:
   - `tag` — the release tag, `{version}` being `X.Y.Z`: propose `v{version}` when `git tag --list "v*"` shows
-    tags or the scheme is `minor`, else `false` (no tag);
+    tags, the scheme is `minor` or the project root has `CHANGELOG.md`, else `false` (no tag);
   - `githubRelease` — draft a GitHub Release with notes and publish it once the tag is on GitHub; needs a tag.
-    Propose `true` with a tag;
+    Propose `true` with a tag, so always when the project root has `CHANGELOG.md`; then say with the question that
+    the notes are the changelog section of the version — the release writes one text for both;
   - `publishedBy` — `skill` (default), or `ci` when the project's CI publishes the release and closes the
     milestone;
   - `push` — `release` pushes the current branch and the tag over HTTPS as the project's gh account, never force.

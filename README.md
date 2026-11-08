@@ -77,8 +77,9 @@ Claude Code to apply it. An update arrives only when the release's `version` is 
    explicit paths, only after you approve this exact commit. `next-task` commits only through it.
 6. **`/gh-tasks:release [auto]`** — milestones only, run by you. Releases the open milestone: an issue still in
    progress stops it; each other open issue is removed from the milestone or closed, as you say. It runs the
-   release steps of `rules.md → ## Release` (checks, version bump, changelog), writes the GitHub Release notes,
-   shows the version, the issues, the diff, the commit message and the notes, and after your «ok» commits, tags
+   release steps of `rules.md → ## Release` (checks, version bump, changelog), writes the GitHub Release notes
+   (by default the `CHANGELOG.md` section of the version, so the changelog and the release say the same, else the
+   issues by type; then the compare and milestone links), shows the version, the issues, the diff, the commit message and the notes, and after your «ok» commits, tags
    (`release.tag`) and creates a draft GitHub Release (`release.githubRelease`). Then the release leaves the
    machine: with `release.push` it pushes the branch and the tag over HTTPS as the project's gh account, then the
    `## Ship` steps run (a deploy); without it the `## Ship` steps push, or you push the commit and the tag and run

@@ -98,14 +98,20 @@ The issues of the release are the milestone's issues closed as completed.
    asked, not guessed. No steps that change files → there is no release commit.
 2. With `githubRelease`, write the notes in `config.language` to a file in the scratchpad (`release-<tag>.md`),
    following `## Release notes`. Without it, the default:
-   - one sentence: what the release brings;
-   - the issues of the release grouped by type — new features, fixes, everything else — one line each: the result
-     for the user, not the implementation, ending with ` (#N)`; an empty group is left out;
+   - the changelog section of the version, when `CHANGELOG.md` in the project root has one: the first `## `
+     heading that holds the version `X.Y.Z` (`## 1.3.0 — 2026-11-08`, `## [1.3.0] - 2026-11-08`, `## v1.3.0`) —
+     the `## Release` steps of 4.1 wrote it — and every line after it up to the next `## ` heading or the end of the
+     file. The notes take its lines as they are, without the heading: the section and the notes are one text. A
+     section with no lines counts as none;
+   - no such section → one sentence: what the release brings; then the issues of the release grouped by type — new
+     features, fixes, everything else — one line each: the result for the user, not the implementation, ending
+     with ` (#N)`; an empty group is left out;
    - the compare link `https://github.com/<repo>/compare/<previousTag>...<tag>` — left out when `previousTag` is
      null or `git tag --list <previousTag>` prints nothing (the previous release was never tagged);
    - the link to the milestone.
 
-   Never put secrets, internal addresses or people's names in the notes.
+   Never put secrets, internal addresses or people's names in the notes. Notes taken from the changelog section
+   follow the rule in both places: take such a line out of the section too, so the two stay one text.
 
 ## 5. Gate
 
@@ -115,11 +121,14 @@ One message with:
 - the issues of the release, one line each, and what step 3 did with the others;
 - the files (`git status --short`) and a short summary of the diff, or «no release commit»;
 - the commit message, following `config.commit` and `## Release`;
-- the notes, in full, with `githubRelease`;
+- the notes, in full, with `githubRelease`. Notes taken from the changelog section are shown once, headed with
+  where the text goes — «`CHANGELOG.md`, section X.Y.Z, and the GitHub Release notes» — and the changelog section
+  is not shown again in the diff summary; the links that follow it go to the notes only;
 - what follows: the tag, the draft, the push (`release.push`: the branch and the tag, to the repository), the
   `## Ship` steps or «push is yours», who publishes and closes the milestone.
 
-Wait for the user's «ok». Anything else is feedback: apply it and show the gate again. Write nothing more before
+Wait for the user's «ok». Anything else is feedback: apply it and show the gate again; feedback on a text shared
+with the changelog changes the section in `CHANGELOG.md` and the notes file alike. Write nothing more before
 the «ok». `auto` → no wait: the message becomes part of the report.
 
 ## 6. Commit and tag
@@ -159,7 +168,8 @@ what the ship steps reported and stop.
 - With `githubRelease`:
   `node "${CLAUDE_PLUGIN_ROOT}/scripts/release.mjs" publish --project "${CLAUDE_PROJECT_DIR}" --title <title>`. It
   refuses while the tag is missing on GitHub or is not the local one; show its reason and stop. A missing draft
-  (the release was prepared before GitHub Releases were turned on) → write the notes as in step 4.2, run
+  (the release was prepared before GitHub Releases were turned on) → write the notes as in step 4.2 — the
+  changelog section of the version is in the release commit by then, so the default takes it — run
   `release.mjs draft`, then `publish`.
 - `node "${CLAUDE_PLUGIN_ROOT}/scripts/milestone.mjs" close --project "${CLAUDE_PROJECT_DIR}" --title <title>`, unless
   it is closed already. It refuses while the milestone has open issues: GitHub lists issues by milestone with a delay

@@ -136,6 +136,8 @@ What a release checks and changes in the repository. Checks run first and a fail
 change files run before the gate and go into one release commit; steps that need the commit run after it. No steps
 that change files → no release commit. The tag is not a step: `release.tag` in the config makes it. A rule here
 may also replace a default of the skill, such as what happens to the issues left open in the milestone.
+With `release.githubRelease`, the `CHANGELOG.md` section of the version written here is also the default release
+notes (see Release notes), so it is written for the users of the release.
 
 > `CHANGELOG.md`: add `## X.Y.Z — YYYY-MM-DD` right under «Unreleased», which stays empty. Run
 > `npm version X.Y.Z --no-git-tag-version`. Commit message: `chore: release X.Y.Z`.
@@ -149,8 +151,15 @@ may also replace a default of the skill, such as what happens to the issues left
 
 `<!-- release, while writing the GitHub Release notes: format, sections, links -->`
 
-The format of the notes when `release.githubRelease` is on. Without it the notes are one sentence, the issues of
-the release grouped by type, the compare link from the previous release tag and the milestone link.
+The format of the notes when `release.githubRelease` is on. Without it the notes are the `CHANGELOG.md` section of
+the version — the `## X.Y.Z …` heading the Release steps added, up to the next `## ` heading, without the heading —
+so the changelog and the release say the same; a project with no such section gets one sentence and the issues of
+the release grouped by type. Either way the compare link from the previous release tag and the milestone link
+follow. A rule here replaces that default: it can shorten a long changelog section for the release page, or build
+the notes another way.
+
+> Notes: the `CHANGELOG.md` section of the version without its «Internal» list, then the compare link and the
+> milestone link.
 
 > First a sentence on what the release brings, then «⚠️ What to do» for the staff when they must act, then sections
 > in this order: Catalog, Orders, Admin, Internal tools. A line is the result for the user, ending with `(#N)`. Last
