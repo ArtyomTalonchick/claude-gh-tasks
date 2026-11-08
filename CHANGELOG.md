@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `release.mjs status` reports `previousTag`, the tag of the previous release milestone, and the default release
+  notes of `/gh-tasks:release` end with the compare link from that tag (when it exists) and the milestone link.
+
 ## 2.2.1 — 2026-10-31
 
 - Every commit of a task now ends with ` (#N)`, not only the last one, so the history shows which task each commit

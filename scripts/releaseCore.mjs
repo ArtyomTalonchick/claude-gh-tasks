@@ -79,6 +79,19 @@ export const pickReleaseMilestone = (milestones) => {
         .at(-1) ?? null;
 };
 
+/**
+ * The tag of the release before `title`: the highest release milestone below it, open or closed (`v1.3` is `1.3.0`);
+ * the first release or no tag in the config → null. The tag is derived from the title, so it may not exist in git.
+ */
+export const getPreviousTag = (template, milestones, title) => {
+    if (template === false) return null;
+    const previous = milestones
+        .filter((milestone) => isMilestoneTitle(milestone.title) && compareVersions(milestone.title, title) < 0)
+        .sort((a, b) => compareVersions(a.title, b.title))
+        .at(-1);
+    return previous ? getTagName(template, previous.title) : null;
+};
+
 // A branch name as `git push` takes it: segments of ref-safe characters, no leading dot or hyphen, no ".."
 const BRANCH_PATTERN = /^(?![.-])(?!.*\.\.)(?!.*\/[.-])[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/;
 

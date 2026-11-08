@@ -149,12 +149,12 @@ may also replace a default of the skill, such as what happens to the issues left
 
 `<!-- release, while writing the GitHub Release notes: format, sections, links -->`
 
-The format of the notes when `release.githubRelease` is on. Without it the notes are one sentence and the issues
-of the release grouped by type.
+The format of the notes when `release.githubRelease` is on. Without it the notes are one sentence, the issues of
+the release grouped by type, the compare link from the previous release tag and the milestone link.
 
 > First a sentence on what the release brings, then «⚠️ What to do» for the staff when they must act, then sections
 > in this order: Catalog, Orders, Admin, Internal tools. A line is the result for the user, ending with `(#N)`. Last
-> line: `Changes - https://github.com/<repo>/compare/<previous tag>...<tag>`.
+> line: `Changes - https://github.com/<repo>/compare/<previousTag>...<tag>`, `previousTag` from `release.mjs status`.
 
 ### Ship
 

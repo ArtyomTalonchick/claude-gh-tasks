@@ -38,7 +38,8 @@ GitHub by `release.push`, a `## Ship` step or the user's push; without the first
 
 `node "${CLAUDE_PLUGIN_ROOT}/scripts/config.mjs" check --project "${CLAUDE_PROJECT_DIR}"`. Non-zero exit → show the
 errors, say «Run `/gh-tasks:setup` first», stop. `milestones: false` → «Milestones are off in this project — there
-is no release to make», stop. Keep `language`, `commit` and `release` (`tag`, `githubRelease`, `publishedBy`, `push`).
+is no release to make», stop. Keep `repo`, `language`, `commit` and `release` (`tag`, `githubRelease`, `publishedBy`,
+`push`).
 
 Read `${CLAUDE_PROJECT_DIR}/.claude/gh-tasks/rules.md`, headings `## Release`, `## Release notes`, `## Ship` and
 `## After release`. A missing file or heading is skipped silently. A rule there wins over the default of the step it
@@ -48,9 +49,11 @@ names — e.g. «open issues stay in the milestone» replaces the question of st
 
 `node "${CLAUDE_PLUGIN_ROOT}/scripts/release.mjs" status --project "${CLAUDE_PROJECT_DIR}"` prints JSON: the
 milestone (the open release milestone, else the highest closed one), `tag` (null: the config has no tag),
-`localTag`, `tagAtHead`, `remoteTag` (the tag on GitHub), `remoteTagIsLocal`, and `release.state` (`none`, `draft`
-or `published`; `release` is null without GitHub Releases). The version is the milestone title without the leading
-`v`, always `X.Y.Z`: `v1.3` is `1.3.0`. Pick the stage:
+`previousTag` (the tag of the highest release milestone below this one, open or closed; null for the first release
+or without a tag — derived from the title, so it may not exist in git), `localTag`, `tagAtHead`, `remoteTag` (the
+tag on GitHub), `remoteTagIsLocal`, and `release.state` (`none`, `draft` or `published`; `release` is null without
+GitHub Releases). The version is the milestone title without the leading `v`, always `X.Y.Z`: `v1.3` is `1.3.0`.
+Pick the stage:
 
 - **Done** — the milestone is closed, and with `githubRelease` the release is published (or `publishedBy: "ci"`) →
   «vX.Y.Z is released» with the links, «nothing to do — plan the next one with `/gh-tasks:plan-version`», stop.
@@ -94,7 +97,10 @@ The issues of the release are the milestone's issues closed as completed.
    following `## Release notes`. Without it, the default:
    - one sentence: what the release brings;
    - the issues of the release grouped by type — new features, fixes, everything else — one line each: the result
-     for the user, not the implementation, ending with ` (#N)`; an empty group is left out.
+     for the user, not the implementation, ending with ` (#N)`; an empty group is left out;
+   - the compare link `https://github.com/<repo>/compare/<previousTag>...<tag>` — left out when `previousTag` is
+     null or `git tag --list <previousTag>` prints nothing (the previous release was never tagged);
+   - the link to the milestone.
 
    Never put secrets, internal addresses or people's names in the notes.
 

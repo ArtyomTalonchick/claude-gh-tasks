@@ -1,8 +1,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-    buildPushArgs, buildReleaseApiArgs, explainPushFailure, findRelease, findRemoteTag, getPublishRefusal,
-    getPushRefusal, getReleaseState, getTagName, isBranchName, isTagName, pickReleaseMilestone, PUSH_TOKEN_VARIABLE,
+    buildPushArgs, buildReleaseApiArgs, explainPushFailure, findRelease, findRemoteTag, getPreviousTag,
+    getPublishRefusal, getPushRefusal, getReleaseState, getTagName, isBranchName, isTagName, pickReleaseMilestone,
+    PUSH_TOKEN_VARIABLE,
 } from "../releaseCore.mjs";
 
 const REPO = "owner/name";
@@ -140,6 +141,40 @@ describe("pickReleaseMilestone", () => {
     test("3. no release milestone → null", () => {
         assert.equal(pickReleaseMilestone([]), null);
         assert.equal(pickReleaseMilestone([{ title: "Someday", state: "closed" }]), null);
+    });
+});
+
+describe("getPreviousTag", () => {
+    const milestones = [
+        { title: "v1.9.5", state: "closed" },
+        { title: "v1.10", state: "closed" },
+        { title: "v1.10.1", state: "open" },
+        { title: "v1.11", state: "open" },
+        { title: "Backlog", state: "open" },
+    ];
+
+    test("1. the highest release title below the current one, compared as versions", () => {
+        assert.equal(getPreviousTag("v{version}", milestones, "v1.10.1"), "v1.10.0");
+        assert.equal(getPreviousTag("v{version}", milestones, "v1.10"), "v1.9.5");
+    });
+
+    test("2. open milestones count, later ones do not", () => {
+        assert.equal(getPreviousTag("v{version}", milestones, "v1.11"), "v1.10.1");
+    });
+
+    test("3. the same version in the other form is not the previous release", () => {
+        const sameVersion = [{ title: "v2.0", state: "closed" }, { title: "v1.9.9", state: "closed" }];
+        assert.equal(getPreviousTag("v{version}", sameVersion, "v2.0.0"), "v1.9.9");
+    });
+
+    test("4. the tag follows release.tag", () => {
+        assert.equal(getPreviousTag("release-{version}", milestones, "v1.11"), "release-1.10.1");
+    });
+
+    test("5. the first release or no tag → null", () => {
+        assert.equal(getPreviousTag("v{version}", milestones, "v1.9.5"), null);
+        assert.equal(getPreviousTag("v{version}", [], "v1.0"), null);
+        assert.equal(getPreviousTag(false, milestones, "v1.11"), null);
     });
 });
 

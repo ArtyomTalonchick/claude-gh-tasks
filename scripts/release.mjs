@@ -8,8 +8,8 @@
  *
  * status prints JSON: the milestone of the release (the given title; else the open release milestone, else the
  * highest closed one), its version and tag (`release.tag` of the config), the local tag and whether it is at HEAD,
- * the tag on GitHub, and the GitHub Release (none / draft / published). The tag and the release are null when the
- * config has no tag or no GitHub Releases.
+ * the tag on GitHub, the GitHub Release (none / draft / published), and the tag of the previous release milestone
+ * (releaseCore getPreviousTag). The tags and the release are null when the config has no tag or no GitHub Releases.
  *
  * draft creates the draft release of the tag with the notes from the file, or rewrites the notes of the existing
  * draft; a draft needs no tag on GitHub. publish turns the draft into a release only when its tag is on GitHub and is
@@ -32,8 +32,9 @@ import { loadConfig, parseRepoFromRemote } from "./config.mjs";
 import { ghEnv } from "./gh.mjs";
 import { buildApiArgs, findMilestone, isMilestoneTitle, PAGE_SIZE as MILESTONE_PAGE_SIZE } from "./milestoneCore.mjs";
 import {
-    buildPushArgs, buildReleaseApiArgs, explainPushFailure, findRelease, findRemoteTag, getPublishRefusal,
-    getPushRefusal, getReleaseState, getTagName, PAGE_SIZE, pickReleaseMilestone, PUSH_TOKEN_VARIABLE,
+    buildPushArgs, buildReleaseApiArgs, explainPushFailure, findRelease, findRemoteTag, getPreviousTag,
+    getPublishRefusal, getPushRefusal, getReleaseState, getTagName, PAGE_SIZE, pickReleaseMilestone,
+    PUSH_TOKEN_VARIABLE,
 } from "./releaseCore.mjs";
 
 const createContext = (args) => {
@@ -67,11 +68,11 @@ const createContext = (args) => {
             }
             const milestone = findMilestone(milestones, args.title);
             if (!milestone) throw new Error(`no milestone ${args.title}`);
-            return milestone;
+            return { milestone, milestones };
         }
         const milestone = pickReleaseMilestone(milestones);
         if (!milestone) throw new Error("no release milestone: plan one with /gh-tasks:plan-version");
-        return milestone;
+        return { milestone, milestones };
     };
 
     const getRelease = (tag) => findRelease(
@@ -89,13 +90,14 @@ const createContext = (args) => {
     };
 
     const getState = () => {
-        const milestone = getMilestone();
+        const { milestone, milestones } = getMilestone();
         const tag = getTagName(config.release.tag, milestone.title);
+        const previousTag = getPreviousTag(config.release.tag, milestones, milestone.title);
         const localTag = tag && getLocalTag(tag);
         const tagAtHead = localTag ? git(["rev-parse", `${tag}^{commit}`]) === git(["rev-parse", "HEAD"]) : null;
         const remoteTag = tag && findRemoteTag(gh(buildReleaseApiArgs("tag", repo, { tag })), tag);
         const release = tag && config.release.githubRelease ? getRelease(tag) : null;
-        return { milestone, tag, localTag, tagAtHead, remoteTag, release };
+        return { milestone, tag, previousTag, localTag, tagAtHead, remoteTag, release };
     };
 
     return { config, repo, env, gh, git, projectDir, getState };
@@ -134,7 +136,7 @@ const isOriginRepo = (git, repo) => {
 
 const commands = {
     status: ({ config, getState }) => {
-        const { milestone, tag, localTag, tagAtHead, remoteTag, release } = getState();
+        const { milestone, tag, previousTag, localTag, tagAtHead, remoteTag, release } = getState();
         console.log(JSON.stringify({
             milestone: {
                 title: milestone.title,
@@ -144,6 +146,7 @@ const commands = {
                 closedIssues: milestone.closed_issues,
             },
             tag,
+            previousTag,
             localTag,
             tagAtHead,
             remoteTag,
