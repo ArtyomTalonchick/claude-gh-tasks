@@ -4,6 +4,9 @@
 
 - `release.mjs status` reports `previousTag`, the tag of the previous release milestone, and the default release
   notes of `/gh-tasks:release` end with the compare link from that tag (when it exists) and the milestone link.
+- `/gh-tasks:release` reads a closed milestone with no tag, locally or on GitHub, as released (the project turned
+  `release.tag` / `release.githubRelease` on after it) and points to `/gh-tasks:plan-version`, instead of matching
+  no stage.
 
 ## 2.2.1 — 2026-10-31
 

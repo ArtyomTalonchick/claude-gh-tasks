@@ -215,7 +215,9 @@ the last one (Q52).
 ### `release [auto]`
 Requires `milestones: true` (Q47). Resumable: `release.mjs status` gives the milestone (the open one, else the
 highest closed), the local tag, the tag on GitHub, the release state and the previous release tag, and the run goes
-on from there. Prepare (dirty tree → stop): open issues — a `status:in-progress` one stops; the others are removed
+on from there. A closed milestone is done when its release is published (or `publishedBy: "ci"`, or without
+`githubRelease`) or when it has no tag, locally or on GitHub (released before tags were on); with a tag it goes on
+to Ship or Publish. Prepare (dirty tree → stop): open issues — a `status:in-progress` one stops; the others are removed
 or closed on the user's word → `## Release` checks and file changes → notes (`## Release notes`, else a sentence,
 the issues by type, the compare link from the previous release tag and the milestone link) → **gate**: version, tag,
 issues, diff, commit message, notes, what follows (`auto`: none) → commit through `gh-tasks:commit` → `git tag -a` →

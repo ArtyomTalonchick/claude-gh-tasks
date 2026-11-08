@@ -57,6 +57,9 @@ Pick the stage:
 
 - **Done** — the milestone is closed, and with `githubRelease` the release is published (or `publishedBy: "ci"`) →
   «vX.Y.Z is released» with the links, «nothing to do — plan the next one with `/gh-tasks:plan-version`», stop.
+  The milestone is closed and the tag is in neither place (`localTag` and `remoteTag` null): the version was released
+  before the tag or the GitHub Release was on → «vX.Y.Z was released before tags were on», «plan the next one with
+  `/gh-tasks:plan-version`», stop.
 - **Prepare** — the milestone is open and the tag is not made yet (`localTag` and `remoteTag` null), or the config
   has no tag → step 3.
 - **Ship** — the tag exists locally and is not on GitHub (`remoteTag` null) → step 8.
